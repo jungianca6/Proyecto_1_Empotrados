@@ -55,7 +55,7 @@ Pendiente por determinar de forma concreta
 
 ### 5.1. Estrategia de Ramas
 * `main`: Rama de producción (código estable).
-* `develop`: Rama de integración para el trabajo diario.
+* `development`: Rama de integración para el trabajo diario.
 * `feat/nombre-tarea`: Desarrollo de nuevas funciones.
 * `fix/nombre-error`: Corrección de fallos.
 

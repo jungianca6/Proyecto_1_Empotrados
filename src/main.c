@@ -2,27 +2,33 @@
 #include <unistd.h>
 #include "motors.h"
 #include "sensors.h"
+#include "fsm.h"
 
 int main(void) {
+    setbuf(stdout, NULL);
+    printf("=== NAVEGACIÓN AUTÓNOMA CON EVASIÓN FSM ===\n");
+
     if (motors_init() != 0 || sensors_init() != 0) {
+        printf("[ERROR] Fallo al inicializar los periféricos GPIO.\n");
         return 1;
     }
 
-    // Pausa inicial de 3 segundos antes de iniciar el monitoreo
-    sleep(3);
+    fsm_init();
 
-    // Monitoreo en vivo durante 30 segundos
-    for (int i = 0; i < 600; i++) {
-        if (sensor_obstacle_detected()) {
-            // Si la mano está frente al sensor -> Girar motores
-            robot_move(ROBOT_FORWARD, 100);
-        } else {
-            // Si la vía está libre -> Detener motores
-            robot_move(ROBOT_STOP, 0);
-        }
-        usleep(50000); // Muestreo rápido cada 50 ms
+    // Pausa inicial de seguridad de 3 segundos
+    sleep(3);
+    fsm_update(EVENT_START);
+
+    // Bucle de control autónomo durante 45 segundos (4500 ciclos a 10 ms)
+    for (int i = 0; i < 4500; i++) {
+        fsm_update(EVENT_NONE);
+        usleep(10000); // 10 ms por ciclo
     }
 
+    // Apagar la FSM y limpiar los pines GPIO
+    fsm_update(EVENT_STOP);
     motors_cleanup();
+    printf("[MAIN] Prueba autónoma finalizada.\n");
+
     return 0;
 }

@@ -1,11 +1,11 @@
 #include <stdio.h>
 #include <time.h>
 #include "fsm.h"
+#include "sensors.h"
 
 static RobotState current_state = STATE_INIT;
 static unsigned long state_entry_time = 0;
 
-// Obtener tiempo actual en milisegundos con reloj monotónico del kernel
 static unsigned long get_millis(void) {
     struct timespec ts;
     clock_gettime(CLOCK_MONOTONIC, &ts);
@@ -27,14 +27,20 @@ void fsm_update(RobotEvent event) {
     unsigned long now = get_millis();
     unsigned long elapsed = now - state_entry_time;
 
-    // Interrupción prioritaria de seguridad
-    if (event == EVENT_OBSTACLE || event == EVENT_STOP) {
+    // 1. EVALUAR SENSOR EN TIEMPO REAL
+    if (sensor_obstacle_detected()) {
+        event = EVENT_OBSTACLE;
+    }
+
+    // 2. PARADA FORZADA SI HAY EVENTO EXPLICITO DE STOP
+    if (event == EVENT_STOP) {
         current_state = STATE_STOPPED;
         robot_move(ROBOT_STOP, 0);
-        printf("[FSM] Evento de parada forzada. Estado: STOPPED\n");
+        printf("[FSM] Parada forzada. Estado: STOPPED\n");
         return;
     }
 
+    // 3. MAQUINA DE ESTADOS FINITOS
     switch (current_state) {
         case STATE_IDLE:
             if (event == EVENT_START) {
@@ -46,34 +52,27 @@ void fsm_update(RobotEvent event) {
             break;
 
         case STATE_MOVING_FORWARD:
-            if (elapsed >= 3000) { // Avanza durante 3000 ms (3s)
-                current_state = STATE_TURNING_LEFT;
-                state_entry_time = now;
-                robot_move(ROBOT_TURN_LEFT, 100);
-                printf("[FSM] Transición: MOVING_FORWARD -> TURNING_LEFT\n");
-            }
-            break;
-
-        case STATE_TURNING_LEFT:
-            if (elapsed >= 1500) { // Gira a la izquierda por 1.5s
+            // Si detecta un obstáculo mientras avanza, pasa a esquivar inmediatamente
+            if (event == EVENT_OBSTACLE) {
                 current_state = STATE_TURNING_RIGHT;
                 state_entry_time = now;
                 robot_move(ROBOT_TURN_RIGHT, 100);
-                printf("[FSM] Transición: TURNING_LEFT -> TURNING_RIGHT\n");
+                printf("[FSM ALERTA] ¡Obstáculo detectado! Esquivando a la derecha...\n");
             }
             break;
 
         case STATE_TURNING_RIGHT:
-            if (elapsed >= 1500) { // Gira a la derecha por 1.5s
-                current_state = STATE_STOPPED;
+            // Mantiene el giro por 1.5s (1500 ms) para desviar el chasis
+            if (elapsed >= 1500) {
+                current_state = STATE_MOVING_FORWARD;
                 state_entry_time = now;
-                robot_move(ROBOT_STOP, 0);
-                printf("[FSM] Transición: TURNING_RIGHT -> STOPPED\n");
+                robot_move(ROBOT_FORWARD, 100);
+                printf("[FSM] Maniobra completada. Reanudando avance en línea recta...\n");
             }
             break;
 
         case STATE_STOPPED:
-            // Estado final sin acción pendiente
+            robot_move(ROBOT_STOP, 0);
             break;
 
         default:

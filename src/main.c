@@ -1,47 +1,30 @@
 #include <stdio.h>
-#include <stdlib.h>
 #include <unistd.h>
 #include "motors.h"
+#include "fsm.h"
 
 int main(void) {
     setbuf(stdout, NULL);
-    printf("=== PRUEBA DE SECUENCIA COMPLETA ===\n");
+    printf("=== CONTROL DE ROBOT POR MÁQUINA DE ESTADOS ===\n");
 
     if (motors_init() != 0) {
-        printf("[ERROR] Fallo al inicializar los pines GPIO.\n");
+        printf("[ERROR] No se pudieron inicializar los motores.\n");
         return 1;
     }
 
-    printf("Pausa inicial de 5 segundos...\n");
-    sleep(5);
+    fsm_init();
 
-    printf("1. Avanzando en linea recta (3s)...\n");
-    robot_move(ROBOT_FORWARD, 100);
-    sleep(3);
-
-    printf("2. Parada intermedia (1s)...\n");
-    robot_move(ROBOT_STOP, 0);
-    sleep(1);
-
-    printf("3. Retrocediendo (3s)...\n");
-    robot_move(ROBOT_BACKWARD, 100);
-    sleep(3);
-
-    printf("4. Parada intermedia (1s)...\n");
-    robot_move(ROBOT_STOP, 0);
-    sleep(1);
-
-    printf("5. GIRO IZQUIERDA (2s)...\n");
-    robot_move(ROBOT_TURN_LEFT, 100);
+    // Arrancar la secuencia tras 2 segundos de espera
     sleep(2);
+    fsm_update(EVENT_START);
 
-    printf("6. GIRO DERECHA (2s)...\n");
-    robot_move(ROBOT_TURN_RIGHT, 100);
-    sleep(2);
+    // Bucle principal de control a 100 Hz (10 ms por ciclo)
+    while (fsm_get_state() != STATE_STOPPED) {
+        fsm_update(EVENT_NONE); // Actualización periódica no bloqueante
+        usleep(10000);          // 10,000 us = 10 ms
+    }
 
-    printf("7. Apagando motores...\n");
     motors_cleanup();
-    printf("Secuencia finalizada.\n");
-
+    printf("[MAIN] Programa finalizado correctamente.\n");
     return 0;
 }

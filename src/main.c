@@ -1,30 +1,28 @@
 #include <stdio.h>
 #include <unistd.h>
 #include "motors.h"
-#include "fsm.h"
+#include "sensors.h"
 
 int main(void) {
-    setbuf(stdout, NULL);
-    printf("=== CONTROL DE ROBOT POR MÁQUINA DE ESTADOS ===\n");
-
-    if (motors_init() != 0) {
-        printf("[ERROR] No se pudieron inicializar los motores.\n");
+    if (motors_init() != 0 || sensors_init() != 0) {
         return 1;
     }
 
-    fsm_init();
+    // Pausa inicial de 3 segundos antes de iniciar el monitoreo
+    sleep(3);
 
-    // Arrancar la secuencia tras 2 segundos de espera
-    sleep(2);
-    fsm_update(EVENT_START);
-
-    // Bucle principal de control a 100 Hz (10 ms por ciclo)
-    while (fsm_get_state() != STATE_STOPPED) {
-        fsm_update(EVENT_NONE); // Actualización periódica no bloqueante
-        usleep(10000);          // 10,000 us = 10 ms
+    // Monitoreo en vivo durante 30 segundos
+    for (int i = 0; i < 600; i++) {
+        if (sensor_obstacle_detected()) {
+            // Si la mano está frente al sensor -> Girar motores
+            robot_move(ROBOT_FORWARD, 100);
+        } else {
+            // Si la vía está libre -> Detener motores
+            robot_move(ROBOT_STOP, 0);
+        }
+        usleep(50000); // Muestreo rápido cada 50 ms
     }
 
     motors_cleanup();
-    printf("[MAIN] Programa finalizado correctamente.\n");
     return 0;
 }

@@ -1,19 +1,15 @@
 #ifndef MOTORS_H
 #define MOTORS_H
 
-// Offset Base Kernel Linux = 512
-// Asignación de Pines GPIO (Dirección):
-// Motor Izquierdo: IN1 (GPIO 18 -> 530), IN2 (GPIO 23 -> 535)
-// Motor Derecho:   IN3 (GPIO 24 -> 536), IN4 (GPIO 25 -> 537)
-#define GPIO_IN1 530
-#define GPIO_IN2 535
-#define GPIO_IN3 536
-#define GPIO_IN4 537
+#define GPIO_BASE 512
 
-// Canales Hardware PWM (sysfs)
-// PWM0 -> GPIO 12 (Motor Izquierdo Enable)
-// PWM1 -> GPIO 13 (Motor Derecho Enable)
-#define PWM_PERIOD_NS 1000000 // 1 kHz (1,000,000 ns)
+// Pines BCM para habilitación y dirección de motores
+#define GPIO_ENA 12  // Pin físico 32 -> Sysfs 524
+#define GPIO_ENB 13  // Pin físico 33 -> Sysfs 525
+#define GPIO_IN1 17  // Pin físico 11 -> Sysfs 529
+#define GPIO_IN2 27  // Pin físico 13 -> Sysfs 539
+#define GPIO_IN3 22  // Pin físico 15 -> Sysfs 534
+#define GPIO_IN4 23  // Pin físico 16 -> Sysfs 535
 
 typedef enum {
     ROBOT_STOP = 0,
@@ -24,8 +20,7 @@ typedef enum {
 } RobotDirection;
 
 int motors_init(void);
-void set_motor_speeds(int speed_left_pct, int speed_right_pct);
-void robot_move(RobotDirection dir, int speed_pct);
+void robot_move(RobotDirection dir, int speed_pct); // speed_pct > 0 activa los motores al 100%
 void motors_cleanup(void);
 
-#endif
+#endif // MOTORS_H

@@ -1,11 +1,37 @@
 cmake_minimum_required(VERSION 3.10)
+
 project(robot-server C)
 
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 
-add_executable(robot-server robot-server.c)
-target_compile_options(robot-server PRIVATE -Wall -Wextra -Wpedantic)
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Wextra -Wpedantic")
 
-install(TARGETS robot-server RUNTIME DESTINATION bin)
-install(FILES robot-server.service DESTINATION lib/systemd/system)
+set(CGI_PROGRAMS
+    login
+    status
+    mode
+    motors
+    sensors
+    leds
+    audio_list
+    audio_play
+    audio_pause
+    audio_stop
+    audio_volume
+    map
+)
+
+foreach(CGI ${CGI_PROGRAMS})
+    add_executable(${CGI} cgi/${CGI}.c)
+
+    install(
+        TARGETS ${CGI}
+        RUNTIME DESTINATION /www/cgi-bin
+    )
+endforeach()
+
+install(
+    DIRECTORY www/
+    DESTINATION /www
+)

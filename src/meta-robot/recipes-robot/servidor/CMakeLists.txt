@@ -14,11 +14,11 @@ set(CGI_PROGRAMS
     motors
     sensors
     leds
-    audio_list
-    audio_play
-    audio_pause
-    audio_stop
-    audio_volume
+    audiolist
+    audioplay
+    audiopause
+    audiostop
+    audiovolume
     map
 )
 

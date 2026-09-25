@@ -21,6 +21,14 @@ static void gpio_export(int raw_pin) {
     char buf[16];
     snprintf(buf, sizeof(buf), "%d", pin);
     sysfs_write("/sys/class/gpio/export", buf);
+    usleep(5000); // 5 ms de pausa para asegurar que el Kernel cree la carpeta en sysfs
+}
+
+static void gpio_unexport(int raw_pin) {
+    int pin = get_gpio_pin(raw_pin);
+    char buf[16];
+    snprintf(buf, sizeof(buf), "%d", pin);
+    sysfs_write("/sys/class/gpio/unexport", buf);
 }
 
 static void gpio_direction(int raw_pin, const char *dir) {
@@ -30,7 +38,16 @@ static void gpio_direction(int raw_pin, const char *dir) {
     sysfs_write(path, dir);
 }
 
-static void gpio_set(int raw_pin, int val) {
+// Lógica invertida para los pines de dirección que pasan por los optoacopladores 4N25 (IN1..IN4)
+static void gpio_set_inverted(int raw_pin, int val) {
+    int pin = get_gpio_pin(raw_pin);
+    char path[60];
+    snprintf(path, sizeof(path), "/sys/class/gpio/gpio%d/value", pin);
+    sysfs_write(path, val ? "0" : "1");
+}
+
+// Lógica directa para pines de habilitación (ENA, ENB) si van directos a la RPi
+static void gpio_set_direct(int raw_pin, int val) {
     int pin = get_gpio_pin(raw_pin);
     char path[60];
     snprintf(path, sizeof(path), "/sys/class/gpio/gpio%d/value", pin);
@@ -38,56 +55,76 @@ static void gpio_set(int raw_pin, int val) {
 }
 
 int motors_init(void) {
-    // Lista de todos los GPIOs a controlar (ENA, ENB e IN1..IN4)
     int gpios[] = {GPIO_ENA, GPIO_ENB, GPIO_IN1, GPIO_IN2, GPIO_IN3, GPIO_IN4};
-    
+
     for (int i = 0; i < 6; i++) {
         gpio_export(gpios[i]);
         gpio_direction(gpios[i], "out");
-        gpio_set(gpios[i], 0);
     }
+
+    // Encender la etapa de potencia (1 lógico = 3.3V físicos en RPi)
+    gpio_set_direct(GPIO_ENA, 1);
+    gpio_set_direct(GPIO_ENB, 1);
+
+    // Iniciar con el robot completamente detenido
+    robot_move(ROBOT_STOP, 0);
 
     return 0;
 }
 
 void robot_move(RobotDirection dir, int speed_pct) {
-    // Si la velocidad es 0 o la dirección es STOP, desactivar todo
+    // Parada total si la dirección es STOP o la velocidad es <= 0
     if (dir == ROBOT_STOP || speed_pct <= 0) {
-        gpio_set(GPIO_ENA, 0);
-        gpio_set(GPIO_ENB, 0);
-        gpio_set(GPIO_IN1, 0); gpio_set(GPIO_IN2, 0);
-        gpio_set(GPIO_IN3, 0); gpio_set(GPIO_IN4, 0);
+        gpio_set_direct(GPIO_ENA, 0);
+        gpio_set_direct(GPIO_ENB, 0);
+        gpio_set_inverted(GPIO_IN1, 0); gpio_set_inverted(GPIO_IN2, 0);
+        gpio_set_inverted(GPIO_IN3, 0); gpio_set_inverted(GPIO_IN4, 0);
         return;
     }
 
-    // Activar etapas de potencia ENA y ENB
-    gpio_set(GPIO_ENA, 1);
-    gpio_set(GPIO_ENB, 1);
+    // Activar habilitación de potencia
+    gpio_set_direct(GPIO_ENA, 1);
+    gpio_set_direct(GPIO_ENB, 1);
 
     switch (dir) {
         case ROBOT_FORWARD:
-            gpio_set(GPIO_IN1, 1); gpio_set(GPIO_IN2, 0);
-            gpio_set(GPIO_IN3, 1); gpio_set(GPIO_IN4, 0);
+            // Motor Izquierdo (IN1/IN2 invertido a 0,1) + Motor Derecho (IN3/IN4 en 1,0)
+            gpio_set_inverted(GPIO_IN1, 0); gpio_set_inverted(GPIO_IN2, 1);
+            gpio_set_inverted(GPIO_IN3, 1); gpio_set_inverted(GPIO_IN4, 0);
             break;
+
         case ROBOT_BACKWARD:
-            gpio_set(GPIO_IN1, 0); gpio_set(GPIO_IN2, 1);
-            gpio_set(GPIO_IN3, 0); gpio_set(GPIO_IN4, 1);
+            gpio_set_inverted(GPIO_IN1, 1); gpio_set_inverted(GPIO_IN2, 0);
+            gpio_set_inverted(GPIO_IN3, 0); gpio_set_inverted(GPIO_IN4, 1);
             break;
-        case ROBOT_TURN_LEFT:
-            gpio_set(GPIO_IN1, 0); gpio_set(GPIO_IN2, 1);
-            gpio_set(GPIO_IN3, 1); gpio_set(GPIO_IN4, 0);
-            break;
+
         case ROBOT_TURN_RIGHT:
-            gpio_set(GPIO_IN1, 1); gpio_set(GPIO_IN2, 0);
-            gpio_set(GPIO_IN3, 0); gpio_set(GPIO_IN4, 1);
+            // Motor Izquierdo empuja hacia adelante, Motor Derecho detenido
+            gpio_set_inverted(GPIO_IN1, 0); gpio_set_inverted(GPIO_IN2, 1);
+            gpio_set_inverted(GPIO_IN3, 0); gpio_set_inverted(GPIO_IN4, 0);
             break;
+
+        case ROBOT_TURN_LEFT:
+            // Motor Izquierdo detenido, Motor Derecho empuja hacia adelante
+            gpio_set_inverted(GPIO_IN1, 0); gpio_set_inverted(GPIO_IN2, 0);
+            gpio_set_inverted(GPIO_IN3, 1); gpio_set_inverted(GPIO_IN4, 0);
+            break;
+
         default:
-            gpio_set(GPIO_ENA, 0);
-            gpio_set(GPIO_ENB, 0);
+            gpio_set_direct(GPIO_ENA, 0);
+            gpio_set_direct(GPIO_ENB, 0);
             break;
     }
 }
 
 void motors_cleanup(void) {
+    int gpios[] = {GPIO_ENA, GPIO_ENB, GPIO_IN1, GPIO_IN2, GPIO_IN3, GPIO_IN4};
+    
+    // Apagar motores
     robot_move(ROBOT_STOP, 0);
+
+    // Liberar los pines en sysfs
+    for (int i = 0; i < 6; i++) {
+        gpio_unexport(gpios[i]);
+    }
 }

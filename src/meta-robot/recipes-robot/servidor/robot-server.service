@@ -1,0 +1,13 @@
+[Unit]
+Description=Servidor web del robot aspiradora
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/usr/sbin/uhttpd -f -p 0.0.0.0:80 -h /www -x /cgi-bin
+Restart=on-failure
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target

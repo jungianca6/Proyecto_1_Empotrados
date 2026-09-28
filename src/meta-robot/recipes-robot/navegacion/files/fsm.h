@@ -20,7 +20,8 @@ typedef enum {
     EVENT_START,
     EVENT_TIMEOUT,
     EVENT_OBSTACLE,
-    EVENT_STOP
+    EVENT_STOP,
+    EVENT_MANUAL
 } RobotEvent;
 
 void fsm_init(void);

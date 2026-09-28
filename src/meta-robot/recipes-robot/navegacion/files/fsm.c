@@ -1,10 +1,31 @@
 #include <stdio.h>
+#include <stdlib.h>
+#include <sys/wait.h>
 #include <time.h>
+#include <unistd.h>
 #include "fsm.h"
 #include "sensors.h"
 
 static RobotState current_state = STATE_INIT;
 static unsigned long state_entry_time = 0;
+
+static void play_notification(const char *variable, const char *fallback)
+{
+    const char *path = getenv(variable);
+    pid_t child;
+
+    if (path == NULL) {
+        path = fallback;
+    }
+    child = fork();
+    if (child == 0) {
+        execl("/usr/bin/audioctl", "audioctl", "notify", path, (char *)NULL);
+        _exit(127);
+    }
+    if (child > 0) {
+        waitpid(child, NULL, 0);
+    }
+}
 
 static unsigned long get_millis(void) {
     struct timespec ts;
@@ -16,6 +37,8 @@ void fsm_init(void) {
     current_state = STATE_IDLE;
     state_entry_time = get_millis();
     robot_move(ROBOT_STOP, 0);
+    play_notification("ROBOT_AUDIO_SYSTEM_START",
+                      "/usr/share/robot-audio/system-start.mp3");
 }
 
 RobotState fsm_get_state(void) {
@@ -37,12 +60,20 @@ void fsm_update(RobotEvent event) {
         return;
     }
 
+    if (event == EVENT_MANUAL) {
+        play_notification("ROBOT_AUDIO_MANUAL",
+                          "/usr/share/robot-audio/manual-mode.mp3");
+        return;
+    }
+
     switch (current_state) {
         case STATE_IDLE:
             if (event == EVENT_START) {
                 current_state = STATE_MOVING_FORWARD;
                 state_entry_time = now;
                 robot_move(ROBOT_FORWARD, 100);
+                play_notification("ROBOT_AUDIO_AUTONOMOUS_START",
+                                  "/usr/share/robot-audio/autonomous-start.mp3");
             }
             break;
 
@@ -52,6 +83,8 @@ void fsm_update(RobotEvent event) {
                 current_state = STATE_TURNING_RIGHT;
                 state_entry_time = now;
                 robot_move(ROBOT_TURN_RIGHT, 100);
+                play_notification("ROBOT_AUDIO_OBSTACLE",
+                                  "/usr/share/robot-audio/obstacle.mp3");
             }
             break;
 

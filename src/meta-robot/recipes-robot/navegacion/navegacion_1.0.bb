@@ -16,3 +16,6 @@ SRC_URI = " \
 S = "${WORKDIR}"
 
 inherit cmake
+
+DEPENDS = "librobot"
+RDEPENDS:${PN} += "robot-audio"

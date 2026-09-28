@@ -19,6 +19,8 @@ SRC_URI = " \
     file://cgi/audiopause.c \
     file://cgi/audiostop.c \
     file://cgi/audiovolume.c \
+    file://cgi/audio_cgi.c \
+    file://cgi/audio_cgi.h \
     file://cgi/map.c \
     file://www/index.html \
     file://www/css/style.css \
@@ -34,7 +36,7 @@ inherit cmake
 #SYSTEMD_SERVICE:${PN} = "robot-server.service"
 #SYSTEMD_AUTO_ENABLE = "enable"
 
-RDEPENDS:${PN} += "uhttpd"
+RDEPENDS:${PN} += "uhttpd robot-audio"
 
 FILES:${PN} += " \
     /www \

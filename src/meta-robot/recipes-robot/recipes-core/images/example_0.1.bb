@@ -2,6 +2,10 @@ SUMMARY = "bitbake-layers recipe"
 DESCRIPTION = "Recipe created by bitbake-layers"
 LICENSE = "MIT"
 
+inherit core-image
+
+IMAGE_INSTALL:append = " robot-audio"
+
 python do_display_banner() {
     bb.plain("***********************************************");
     bb.plain("*                                             *");

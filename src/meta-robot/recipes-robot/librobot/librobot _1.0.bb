@@ -19,3 +19,5 @@ SRC_URI = " \
 S = "${WORKDIR}"
 
 inherit cmake
+
+FILES:${PN} += "${libdir}/librobot.so.*"

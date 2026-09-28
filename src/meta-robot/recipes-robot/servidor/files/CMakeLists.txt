@@ -25,6 +25,11 @@ set(CGI_PROGRAMS
 foreach(CGI ${CGI_PROGRAMS})
     add_executable(${CGI} cgi/${CGI}.c)
 
+    if(CGI MATCHES "^audio")
+        target_sources(${CGI} PRIVATE cgi/audio_cgi.c)
+        target_include_directories(${CGI} PRIVATE cgi)
+    endif()
+
     install(
         TARGETS ${CGI}
         RUNTIME DESTINATION /www/cgi-bin

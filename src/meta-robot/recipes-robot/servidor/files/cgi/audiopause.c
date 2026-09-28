@@ -1,13 +1,16 @@
 #include <stdio.h>
+#include "audio_cgi.h"
 
 int main(void)
 {
+    int result = audio_cgi_call("pause", NULL);
+
     printf("Content-Type: application/json\r\n");
     printf("\r\n");
 
-    printf(
-        "{\"status\":\"ok\",\"message\":\"Pausa solicitada\"}\n"
-    );
+    printf(result == 0
+        ? "{\"status\":\"ok\",\"message\":\"Pausa solicitada\"}\n"
+        : "{\"status\":\"error\",\"message\":\"No se pudo pausar\"}\n");
 
-    return 0;
+    return result == 0 ? 0 : 1;
 }

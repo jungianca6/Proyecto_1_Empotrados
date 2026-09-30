@@ -16,32 +16,46 @@ static void sysfs_write(const char *path, const char *value) {
     close(fd);
 }
 
-int sensors_init(void) {
-    int pin = get_gpio_pin(GPIO_IR_FRONT);
+static void sensor_gpio_init(int gpio) {
+    int pin = get_gpio_pin(gpio);
     char buf[16], path[60];
 
-    // Exportar GPIO 24 (536)
     snprintf(buf, sizeof(buf), "%d", pin);
     sysfs_write("/sys/class/gpio/export", buf);
 
-    // Configurar como ENTRADA
     snprintf(path, sizeof(path), "/sys/class/gpio/gpio%d/direction", pin);
     sysfs_write(path, "in");
-
-    return 0;
 }
 
-int sensor_obstacle_detected(void) {
-    int pin = get_gpio_pin(GPIO_IR_FRONT);
+static int sensor_gpio_read(int gpio) {
+    int pin = get_gpio_pin(gpio);
     char path[60], val = '1';
-    
+
     snprintf(path, sizeof(path), "/sys/class/gpio/gpio%d/value", pin);
+
     int fd = open(path, O_RDONLY);
     if (fd >= 0) {
         read(fd, &val, 1);
         close(fd);
     }
 
-    // Este módulo FC-51 entrega '0' (LOW) al detectar obstáculo y '1' (HIGH) cuando está despejado
+    // FC-51:
+    // 0 = obstáculo
+    // 1 = despejado
     return (val == '0') ? 1 : 0;
+}
+
+int sensors_init(void) {
+    sensor_gpio_init(GPIO_IR_FRONT);
+    sensor_gpio_init(GPIO_IR_SIDE);
+
+    return 0;
+}
+
+int sensor_obstacle_detected(void) {
+    return sensor_gpio_read(GPIO_IR_FRONT);
+}
+
+int sensor_side_obstacle_detected(void) {
+    return sensor_gpio_read(GPIO_IR_SIDE);
 }

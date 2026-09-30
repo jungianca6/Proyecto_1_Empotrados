@@ -27,9 +27,10 @@ void fsm_update(RobotEvent event) {
     unsigned long elapsed = now - state_entry_time;
 
     // Evaluación del sensor en tiempo real
-    if (sensor_obstacle_detected()) {
+    if (sensor_obstacle_detected() ||
+        sensor_side_obstacle_detected()) {
         event = EVENT_OBSTACLE;
-    }
+    }   
 
     if (event == EVENT_STOP) {
         current_state = STATE_STOPPED;

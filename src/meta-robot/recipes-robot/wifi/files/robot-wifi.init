@@ -1,0 +1,24 @@
+#!/bin/sh
+mount -o remount,rw /
+
+LOG="/etc/wifi_log.txt"
+echo "=== INICIO WI-FI HOTSPOT ===" > $LOG
+
+depmod -a >> $LOG 2>&1
+modprobe cfg80211 >> $LOG 2>&1
+modprobe brcmutil >> $LOG 2>&1
+modprobe brcmfmac >> $LOG 2>&1
+
+sleep 2
+
+killall wpa_supplicant udhcpc > /dev/null 2>&1
+rm -rf /var/run/wpa_supplicant
+
+ifconfig wlan0 up >> $LOG 2>&1
+sleep 1
+
+wpa_supplicant -B -i wlan0 -c /etc/wpa_supplicant/wpa_supplicant.conf >> $LOG 2>&1
+sleep 2
+
+# Solicitar IP por DHCP al celular
+udhcpc -i wlan0 >> $LOG 2>&1

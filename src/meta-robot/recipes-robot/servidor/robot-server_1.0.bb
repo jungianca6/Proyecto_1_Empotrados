@@ -34,7 +34,7 @@ inherit cmake
 #SYSTEMD_SERVICE:${PN} = "robot-server.service"
 #SYSTEMD_AUTO_ENABLE = "enable"
 
-RDEPENDS:${PN} += "uhttpd"
+#RDEPENDS:${PN} += "uhttpd"
 
 FILES:${PN} += " \
     /www \

@@ -22,8 +22,17 @@ set(CGI_PROGRAMS
     map
 )
 
+#add_library(session STATIC cgi/session.c)
+#target_include_directories(session PUBLIC cgi)
+
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(CJSON REQUIRED IMPORTED_TARGET libcjson)
+
 foreach(CGI ${CGI_PROGRAMS})
     add_executable(${CGI} cgi/${CGI}.c)
+
+    target_link_libraries(${CGI} PRIVATE PkgConfig::CJSON)
+    target_include_directories(${CGI} PRIVATE ${CJSON_INCLUDE_DIRS})
 
     install(
         TARGETS ${CGI}

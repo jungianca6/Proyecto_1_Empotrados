@@ -23,21 +23,28 @@ SRC_URI = " \
     file://www/index.html \
     file://www/css/style.css \
     file://www/js/app.js \
+    file://robot-server.service \
 "
 
 S = "${WORKDIR}"
 
-inherit cmake 
 
-#systemd 
+DEPENDS = "cjson"
+RDEPENDS:${PN} += "uhttpd"
 
-#SYSTEMD_SERVICE:${PN} = "robot-server.service"
-#SYSTEMD_AUTO_ENABLE = "enable"
+inherit cmake pkgconfig systemd
 
-#RDEPENDS:${PN} += "uhttpd"
+SYSTEMD_SERVICE:${PN} = "robot-server.service"
+SYSTEMD_AUTO_ENABLE = "enable"
+
+do_install:append() {
+    install -d ${D}${systemd_system_unitdir}
+    install -m 0644 ${WORKDIR}/robot-server.service ${D}${systemd_system_unitdir}/robot-server.service
+}
 
 FILES:${PN} += " \
     /www \
     /www/cgi-bin \
     /www/cgi-bin/* \
+    ${systemd_system_unitdir}/robot-server.service \
 "

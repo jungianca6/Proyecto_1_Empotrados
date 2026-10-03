@@ -1,5 +1,5 @@
 #include <stdio.h>
-#include "../include/librobot.h"
+#include "librobot.h"
 
 // --- Motores ---
 int robot_motor_init(void) {

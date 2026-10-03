@@ -4,10 +4,12 @@ LIC_FILES_CHKSUM = "file://${COMMON_LICENSE_DIR}/MIT;md5=0835ade698e0bcf8506ecda
 
 SRC_URI = " \
     file://CMakeLists.txt \
+    file://include/librobot.h \
     file://include/motors.h \
     file://include/sensors.h \
     file://include/fsm.h \
     file://include/gpio.h \
+    file://src/librobot.c \
     file://src/motors.c \
     file://src/sensors.c \
     file://src/fsm.c \

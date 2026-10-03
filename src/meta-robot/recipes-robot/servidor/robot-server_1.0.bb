@@ -26,30 +26,30 @@ SRC_URI = " \
     file://robot-server.service \
     file://lib/session/session.c \
     file://lib/session/session.h \
-    file://lib/include/librobot.h \
     file://lib/stub/librobot_stub.c \
 "
 
 S = "${WORKDIR}"
 
 
-DEPENDS = "cjson"
+DEPENDS = "cjson librobot"
 RDEPENDS:${PN} += "uhttpd"
 
 inherit cmake pkgconfig systemd
 
 # stub = librobot_stub (desarrollo); real = librobot de la imagen.
 # Cambiar a "real" cuando librobot implemente la API robot_*.
-PACKAGECONFIG ??= "stub"
+PACKAGECONFIG ??= "real"
 PACKAGECONFIG[stub] = "-DUSE_STUB=ON,-DUSE_STUB=OFF,,"
-PACKAGECONFIG[real] = ",,librobot,librobot"
+PACKAGECONFIG[real] = "-DUSE_STUB=OFF,-DUSE_STUB=ON,,librobot"
 
 SYSTEMD_SERVICE:${PN} = "robot-server.service"
 SYSTEMD_AUTO_ENABLE = "enable"
 
 do_install:append() {
     install -d ${D}${systemd_system_unitdir}
-    install -m 0644 ${WORKDIR}/robot-server.service ${D}${systemd_system_unitdir}/robot-server.service
+    install -m 0644 ${WORKDIR}/robot-server.service \
+        ${D}${systemd_system_unitdir}/robot-server.service
 }
 
 FILES:${PN} += " \

@@ -1,81 +1,185 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
 #include <cjson/cJSON.h>
+
 #include "librobot.h"
 #include "session.h"
 
-static void send_error(int http_code, const char *msg) {
+static void send_error(int http_code, const char *msg)
+{
     printf("Status: %d\r\n", http_code);
-    printf("Content-Type: application/json\r\n\r\n");
-    printf("{\"status\":\"error\",\"message\":\"%s\"}", msg);
+    printf("Content-Type: application/json\r\n");
+    printf("\r\n");
+
+    printf(
+        "{\"status\":\"error\",\"message\":\"%s\"}",
+        msg
+    );
 }
 
-int main(void) {
+static int get_token(char *token, size_t token_size)
+{
     char *auth = getenv("HTTP_AUTHORIZATION");
-    if (!auth || !session_validate(auth)) {
-        send_error(401, "Token inválido o expirado");
+
+    if (!auth || auth[0] == '\0')
+        return -1;
+
+    if (strncmp(auth, "Bearer ", 7) == 0)
+        auth += 7;
+
+    if (strlen(auth) >= token_size)
+        return -1;
+
+    strcpy(token, auth);
+
+    return 0;
+}
+
+static int parse_led(const char *name, robot_led_t *led)
+{
+    if (strcmp(name, "auto") == 0) {
+        *led = LED_AUTO;
+        return 0;
+    }
+
+    if (strcmp(name, "manual") == 0) {
+        *led = LED_MANUAL;
+        return 0;
+    }
+
+    if (strcmp(name, "obstacle") == 0) {
+        *led = LED_OBSTACLE;
+        return 0;
+    }
+
+    if (strcmp(name, "power") == 0) {
+        *led = LED_POWER;
+        return 0;
+    }
+
+    return -1;
+}
+
+int main(void)
+{
+    char token[128];
+
+    if (get_token(token, sizeof(token)) != 0 ||
+        !session_validate(token)) {
+
+        send_error(401, "Token invalido o expirado");
         return 0;
     }
 
     char *method = getenv("REQUEST_METHOD");
 
-    if (method && strcmp(method, "GET") == 0) {
-        // Consultar estado (nota: el stub no guarda estado real, esto asume
-        // que robot_led_get() existiría; por ahora reportamos apagado fijo
-        // hasta que el módulo real de LEDs esté implementado en).
-        printf("Content-Type: application/json\r\n\r\n");
-        printf("{\"status\":\"ok\",\"data\":{\"auto\":0,\"manual\":0,\"obstacle\":0,\"power\":1}}");
+    if (method &&
+        strcmp(method, "GET") == 0) {
+
+        printf("Content-Type: application/json\r\n");
+        printf("\r\n");
+
+        printf(
+            "{"
+            "\"status\":\"ok\","
+            "\"data\":{"
+                "\"implemented\":false,"
+                "\"message\":\"Modulo de LEDs pendiente\""
+            "}"
+            "}"
+        );
+
         return 0;
     }
 
-    // POST: cambiar estado de un LED
     char *len_str = getenv("CONTENT_LENGTH");
     int len = len_str ? atoi(len_str) : 0;
 
     if (len <= 0 || len >= 1024) {
-        send_error(400, "Body inválido o ausente");
+        send_error(400, "Body invalido o ausente");
         return 0;
     }
 
     char body[1024] = {0};
-    fread(body, 1, len, stdin);
+
+    if (fread(body, 1, (size_t)len, stdin) != (size_t)len) {
+        send_error(400, "No se pudo leer el body");
+        return 0;
+    }
 
     cJSON *json = cJSON_Parse(body);
+
     if (!json) {
-        send_error(400, "JSON inválido");
+        send_error(400, "JSON invalido");
         return 0;
     }
 
-    cJSON *led = cJSON_GetObjectItem(json, "led");
-    cJSON *state = cJSON_GetObjectItem(json, "state");
+    cJSON *led_json =
+        cJSON_GetObjectItem(json, "led");
 
-    if (!cJSON_IsString(led) || !cJSON_IsNumber(state)) {
+    cJSON *state_json =
+        cJSON_GetObjectItem(json, "state");
+
+    if (!cJSON_IsString(led_json) ||
+        !cJSON_IsNumber(state_json)) {
+
         cJSON_Delete(json);
-        send_error(400, "Faltan campos 'led' o 'state'");
+
+        send_error(
+            400,
+            "Faltan campos led o state"
+        );
+
         return 0;
     }
 
-    led_id_t id;
-    if (strcmp(led->valuestring, "auto") == 0) id = LED_AUTO;
-    else if (strcmp(led->valuestring, "manual") == 0) id = LED_MANUAL;
-    else if (strcmp(led->valuestring, "obstacle") == 0) id = LED_OBSTACLE;
-    else if (strcmp(led->valuestring, "power") == 0) id = LED_POWER;
-    else {
+    robot_led_t led;
+
+    if (parse_led(led_json->valuestring, &led) != 0) {
         cJSON_Delete(json);
-        send_error(400, "Valor de 'led' inválido");
+
+        send_error(
+            400,
+            "LED invalido"
+        );
+
         return 0;
     }
 
-    int result = robot_led_set(id, state->valueint);
+    int state = state_json->valueint;
+
+    if (state != 0 && state != 1) {
+        cJSON_Delete(json);
+
+        send_error(
+            400,
+            "state debe ser 0 o 1"
+        );
+
+        return 0;
+    }
+
+    int result = robot_led_set(led, state);
+
     cJSON_Delete(json);
 
     if (result != 0) {
-        send_error(500, "Fallo al cambiar el LED");
+        send_error(
+            501,
+            "Modulo de LEDs no implementado"
+        );
+
         return 0;
     }
 
-    printf("Content-Type: application/json\r\n\r\n");
-    printf("{\"status\":\"ok\"}");
+    printf("Content-Type: application/json\r\n");
+    printf("\r\n");
+
+    printf(
+        "{\"status\":\"ok\"}"
+    );
+
     return 0;
 }

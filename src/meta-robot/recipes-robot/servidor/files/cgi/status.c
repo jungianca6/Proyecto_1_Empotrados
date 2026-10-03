@@ -1,54 +1,108 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
 #include "librobot.h"
 #include "session.h"
 
 #define MODE_FILE "/tmp/robot_mode"
 
-static void send_error(int http_code, const char *msg) {
+static void send_error(int http_code, const char *msg)
+{
     printf("Status: %d\r\n", http_code);
-    printf("Content-Type: application/json\r\n\r\n");
-    printf("{\"status\":\"error\",\"message\":\"%s\"}", msg);
+    printf("Content-Type: application/json\r\n");
+    printf("\r\n");
+
+    printf(
+        "{\"status\":\"error\",\"message\":\"%s\"}",
+        msg
+    );
 }
 
-static void read_mode(char *out, int out_len) {
+static int get_token(char *token, size_t token_size)
+{
+    char *auth = getenv("HTTP_AUTHORIZATION");
+
+    if (!auth || auth[0] == '\0')
+        return -1;
+
+    if (strncmp(auth, "Bearer ", 7) == 0)
+        auth += 7;
+
+    if (strlen(auth) >= token_size)
+        return -1;
+
+    strcpy(token, auth);
+
+    return 0;
+}
+
+static void read_mode(char *out, size_t out_len)
+{
     FILE *f = fopen(MODE_FILE, "r");
+
     if (!f) {
         snprintf(out, out_len, "autonomous");
         return;
     }
-    if (fscanf(f, "%63s", out) != 1) {
+
+    if (fscanf(f, "%63s", out) != 1)
         snprintf(out, out_len, "autonomous");
-    }
+
     fclose(f);
 }
 
-int main(void) {
-    char *auth = getenv("HTTP_AUTHORIZATION");
-    if (!auth || !session_validate(auth)) {
-        send_error(401, "Token inválido o expirado");
+int main(void)
+{
+    char token[128];
+
+    if (get_token(token, sizeof(token)) != 0 ||
+        !session_validate(token)) {
+
+        send_error(401, "Token invalido o expirado");
         return 0;
     }
 
     char mode[64];
+
     read_mode(mode, sizeof(mode));
 
-    float front = robot_sensor_read_distance(SENSOR_FRONT);
-    float left  = robot_sensor_read_distance(SENSOR_LEFT);
-    float right = robot_sensor_read_distance(SENSOR_RIGHT);
+    int front = robot_sensor_front_obstacle();
+    int side = robot_sensor_side_obstacle();
 
-    // TODO: estado real de LEDs y audio cuando existan las funciones
-    // robot_led_get() / robot_audio_get_status() en librobot.h.
-    printf("Content-Type: application/json\r\n\r\n");
+    if (front < 0 || side < 0) {
+        send_error(
+            500,
+            "Error leyendo los sensores"
+        );
+
+        return 0;
+    }
+
+    printf("Content-Type: application/json\r\n");
+    printf("\r\n");
+
     printf(
-        "{\"status\":\"ok\",\"data\":{"
-        "\"mode\":\"%s\","
-        "\"sensors\":{\"front\":%.2f,\"left\":%.2f,\"right\":%.2f},"
-        "\"leds\":{\"auto\":0,\"manual\":0,\"obstacle\":0,\"power\":1},"
-        "\"audio\":{\"playing\":false,\"volume\":0}"
-        "}}",
-        mode, front, left, right
+        "{"
+        "\"status\":\"ok\","
+        "\"data\":{"
+            "\"mode\":\"%s\","
+            "\"sensors\":{"
+                "\"front_obstacle\":%d,"
+                "\"side_obstacle\":%d"
+            "},"
+            "\"leds\":{"
+                "\"implemented\":false"
+            "},"
+            "\"audio\":{"
+                "\"implemented\":false"
+            "}"
+        "}"
+        "}",
+        mode,
+        front,
+        side
     );
+
     return 0;
 }

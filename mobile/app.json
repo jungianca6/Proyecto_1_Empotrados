@@ -1,0 +1,19 @@
+{
+  "expo": {
+    "name": "Rover",
+    "slug": "robot-aspiradora",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "edgeToEdgeEnabled": true
+    },
+    "plugins": [
+      "expo-status-bar"
+    ]
+  }
+}

@@ -9,6 +9,7 @@ FILESEXTRAPATHS:prepend := "${THISDIR}/files:"
 SRC_URI = " \
     file://CMakeLists.txt \
     file://cgi/login.c \
+    file://cgi/register.c \
     file://cgi/status.c \
     file://cgi/mode.c \
     file://cgi/motors.c \
@@ -27,13 +28,23 @@ SRC_URI = " \
     file://lib/session/session.c \
     file://lib/session/session.h \
     file://lib/stub/librobot_stub.c \
+    file://lib/db/database.c \
+    file://lib/db/database.h \
 "
 
 S = "${WORKDIR}"
 
 
-DEPENDS = "cjson librobot"
-RDEPENDS:${PN} += "uhttpd"
+DEPENDS = " \
+    cjson \
+    librobot \
+    sqlite3 \
+"
+
+RDEPENDS:${PN} += " \
+    uhttpd \
+    sqlite3 \
+"
 
 inherit cmake pkgconfig systemd
 

@@ -22,12 +22,12 @@ Para probar solo la interfaz, pulsa **Probar en modo demo** en la pantalla inici
 
 ## Inicio de sesión
 
-Para conectarte al servidor del proyecto, usa la dirección IP de la Raspberry Pi y, mientras el CGI de login siga siendo el stub actual, puedes escribir cualquier usuario y contraseña; por ejemplo:
+Para conectarte al servidor del proyecto, usa la dirección IP de la Raspberry Pi y las credenciales de prueba configuradas en el CGI:
 
-Usuario: demo
-Contraseña: demo
+Usuario: admin
+Contraseña: robot123
 
-El handler actual no valida esos datos: responde siempre con el token fijo `test-token`. `demo` / `demo` son solo valores de prueba, no una cuenta registrada ni credenciales seguras. La cuenta de Expo Go/Expo CLI es independiente y no sirve para iniciar sesión en Rover. Para probar sin servidor, usa **Probar en modo demo** y no ingreses credenciales.
+Estas credenciales están escritas como valores fijos en el handler de desarrollo; no deben usarse en un despliegue público. La cuenta de Expo Go/Expo CLI es independiente y no sirve para iniciar sesión en Rover. Para probar sin servidor, usa **Probar en modo demo** y no ingreses credenciales.
 
 ## Funciones
 
@@ -40,6 +40,6 @@ El handler actual no valida esos datos: responde siempre con el token fijo `test
 
 ## API esperada
 
-La app consulta `/cgi-bin/status`, `sensors`, `leds`, `map` y `audiolist`. Envía solicitudes `POST` con campos `application/x-www-form-urlencoded` a `login`, `mode`, `motors`, `audioplay`, `audiopause`, `audiostop` y `audiovolume`. Las respuestas de lectura siguen la estructura `{ "status": "ok", "data": ... }`; el inicio de sesión debe incluir `token`.
+La app consulta `/cgi-bin/status`, `sensors`, `leds`, `map` y `audiolist`. Los `POST` envían JSON: login usa `username`/`password`, modo usa `mode`, y motores usa `direction`/`speed` (0–100). Las solicitudes autenticadas envían el token directamente en `Authorization`, sin prefijo `Bearer`, para coincidir también con los handlers de modo y mapa. Las respuestas usan `{ "status": "ok", "data": ... }`; el mapa del servidor expone `grid`, que el cliente normaliza a `cells`, y los sensores exponen `front_obstacle`/`side_obstacle`, que el cliente presenta como frontal/lateral.
 
 La app está conectada a los endpoints actuales, pero los handlers del servidor en el repositorio aún devuelven respuestas de prueba: el login no valida credenciales y los comandos no accionan el hardware. Se requiere completar esos handlers y su integración con `librobot` antes de usarla para controlar el robot real. El mapa espera celdas `0` desconocida, `1` visitada, `2` obstáculo y `3` posición del robot.

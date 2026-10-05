@@ -1,4 +1,4 @@
-Simport { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -71,7 +71,11 @@ function App() {
             api.songs(),
           ]);
         if (statusResult.data) {
-          setStatus(statusResult.data);
+          setStatus((current) => ({
+            ...current,
+            ...statusResult.data,
+            motor: statusResult.data?.motor ?? current.motor ?? "stopped",
+          }));
           if (statusResult.data.mode) setMode(statusResult.data.mode);
         }
         if (sensorResult.data) setSensors(sensorResult.data);
@@ -102,7 +106,7 @@ function App() {
     setError("");
     setMode("manual");
     setStatus({ mode: "manual", motor: "stopped", server: "running" });
-    setSensors({ front: true, left: false, right: false });
+    setSensors({ front: true, side: false });
     setLeds({ system: true, manual: true, autonomous: false, obstacle: true });
     setRobotMap({
       width: 5,
@@ -216,8 +220,7 @@ function App() {
   const isAutonomous = mode === "autonomous";
   const sensorRows = [
     { key: "front" as const, label: "Frontal" },
-    { key: "left" as const, label: "Izquierdo" },
-    { key: "right" as const, label: "Derecho" },
+    { key: "side" as const, label: "Lateral" },
   ];
   const ledRows = [
     { key: "system" as const, label: "Sistema" },

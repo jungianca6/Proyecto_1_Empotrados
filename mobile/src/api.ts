@@ -8,8 +8,7 @@ export type RobotStatus = {
 
 export type SensorData = {
   front?: boolean | number;
-  left?: boolean | number;
-  right?: boolean | number;
+  side?: boolean | number;
 };
 
 export type LedData = {
@@ -37,11 +36,17 @@ type ApiResult<T> = {
   message?: string;
 };
 
-function formBody(values: Record<string, string | number>): string {
-  return Object.entries(values)
-    .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(value)}`)
-    .join("&");
-}
+type ServerMap = {
+  width: number;
+  height: number;
+  grid?: number[][];
+  cells?: number[][];
+};
+
+type ServerSensors = {
+  front_obstacle?: boolean | number;
+  side_obstacle?: boolean | number;
+};
 
 export function createRobotApi(serverUrl: string, token?: string) {
   const baseUrl = serverUrl.trim().replace(/\/+$/, "");
@@ -52,13 +57,13 @@ export function createRobotApi(serverUrl: string, token?: string) {
     values?: Record<string, string | number>,
   ): Promise<ApiResult<T>> {
     const headers: Record<string, string> = { Accept: "application/json" };
-    if (values) headers["Content-Type"] = "application/x-www-form-urlencoded";
-    if (token) headers.Authorization = `Bearer ${token}`;
+    if (values) headers["Content-Type"] = "application/json";
+    if (token) headers.Authorization = token;
 
     const response = await fetch(`${baseUrl}/cgi-bin/${endpoint}`, {
       method,
       headers,
-      body: values ? formBody(values) : undefined,
+      body: values ? JSON.stringify(values) : undefined,
     });
 
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
@@ -69,12 +74,35 @@ export function createRobotApi(serverUrl: string, token?: string) {
     login: (username: string, password: string) =>
       request<never>("login", "POST", { username, password }),
     status: () => request<RobotStatus>("status"),
-    sensors: () => request<SensorData>("sensors"),
+    async sensors() {
+      const result = await request<ServerSensors>("sensors");
+      return {
+        ...result,
+        data: result.data
+          ? {
+              front: result.data.front_obstacle,
+              side: result.data.side_obstacle,
+            }
+          : undefined,
+      } as ApiResult<SensorData>;
+    },
     leds: () => request<LedData>("leds"),
-    map: () => request<RobotMap>("map"),
+    async map() {
+      const result = await request<ServerMap>("map");
+      if (!result.data) return result as ApiResult<RobotMap>;
+      return {
+        ...result,
+        data: {
+          width: result.data.width,
+          height: result.data.height,
+          cells: result.data.grid ?? result.data.cells ?? [],
+        },
+      } as ApiResult<RobotMap>;
+    },
     songs: () => request<{ songs: Song[] }>("audiolist"),
     setMode: (mode: RobotMode) => request<never>("mode", "POST", { mode }),
-    move: (command: string) => request<never>("motors", "POST", { command }),
+    move: (direction: string, speed = 65) =>
+      request<never>("motors", "POST", { direction, speed }),
     play: (song: Song) => request<never>("audioplay", "POST", { song: song.name }),
     pause: () => request<never>("audiopause", "POST", {}),
     stopAudio: () => request<never>("audiostop", "POST", {}),

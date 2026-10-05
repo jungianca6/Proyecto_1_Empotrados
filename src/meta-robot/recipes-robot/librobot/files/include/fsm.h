@@ -3,18 +3,25 @@
 
 #include "motors.h"
 
-// Estados posibles del robot
+/*
+ * Estados de navegación del robot.
+ *
+ * El algoritmo implementa cobertura reactiva con rebote:
+ * el robot avanza, detecta obstáculos, se detiene,
+ * retrocede y cambia de dirección antes de continuar.
+ */
 typedef enum {
     STATE_INIT = 0,
     STATE_IDLE,
     STATE_MOVING_FORWARD,
+    STATE_AVOID_STOP,
+    STATE_BACKING_UP,
     STATE_TURNING_LEFT,
     STATE_TURNING_RIGHT,
     STATE_STOPPED,
     STATE_EMERGENCY
 } RobotState;
 
-// Eventos que disparan transiciones
 typedef enum {
     EVENT_NONE = 0,
     EVENT_START,

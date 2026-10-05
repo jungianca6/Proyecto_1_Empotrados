@@ -15,17 +15,26 @@ SRC_URI = " \
 S = "${WORKDIR}"
 
 inherit cmake
-inherit update-rc.d
 
 do_install:append() {
+    # Instalar script de inicio
     install -d ${D}${sysconfdir}/init.d
     install -m 0755 ${WORKDIR}/app_robot.init \
         ${D}${sysconfdir}/init.d/app_robot
-}
 
-INITSCRIPT_NAME = "app_robot"
-INITSCRIPT_PARAMS = "defaults 90"
+    # Crear enlaces para arranque automatico
+    install -d ${D}${sysconfdir}/rc3.d
+    install -d ${D}${sysconfdir}/rc5.d
+
+    ln -sf ../init.d/app_robot \
+        ${D}${sysconfdir}/rc3.d/S90app_robot
+
+    ln -sf ../init.d/app_robot \
+        ${D}${sysconfdir}/rc5.d/S90app_robot
+}
 
 FILES:${PN} += " \
     ${sysconfdir}/init.d/app_robot \
+    ${sysconfdir}/rc3.d/S90app_robot \
+    ${sysconfdir}/rc5.d/S90app_robot \
 "

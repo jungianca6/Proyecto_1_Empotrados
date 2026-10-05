@@ -9,6 +9,7 @@ add_library(robot SHARED
     src/sensors.c
     src/fsm.c
     src/gpio.c
+    src/leds.c
 )
 
 set_target_properties(robot PROPERTIES
@@ -25,6 +26,7 @@ install(FILES
     include/motors.h 
     include/sensors.h 
     include/fsm.h 
-    include/gpio.h 
+    include/gpio.h
+    include/leds.h
     DESTINATION include
 )

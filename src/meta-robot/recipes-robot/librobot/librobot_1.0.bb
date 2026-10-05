@@ -9,11 +9,13 @@ SRC_URI = " \
     file://include/sensors.h \
     file://include/fsm.h \
     file://include/gpio.h \
+    file://include/leds.h\
     file://src/librobot.c \
     file://src/motors.c \
     file://src/sensors.c \
     file://src/fsm.c \
     file://src/gpio.c \
+    file://src/leds.c\
 "
 
 S = "${WORKDIR}"

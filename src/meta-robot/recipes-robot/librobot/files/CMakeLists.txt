@@ -4,6 +4,7 @@ project(librobot C)
 include_directories(include)
 
 add_library(robot SHARED
+    src/librobot.c
     src/motors.c
     src/sensors.c
     src/fsm.c
@@ -11,12 +12,20 @@ add_library(robot SHARED
     src/leds.c
 )
 
-install(TARGETS robot DESTINATION lib)
+set_target_properties(robot PROPERTIES
+    OUTPUT_NAME "robot"
+)
 
-install(FILES
-    include/motors.h
-    include/sensors.h
-    include/fsm.h
+install(
+    TARGETS robot
+    LIBRARY DESTINATION lib
+)
+
+install(FILES 
+    include/librobot.h
+    include/motors.h 
+    include/sensors.h 
+    include/fsm.h 
     include/gpio.h
     include/leds.h
     DESTINATION include

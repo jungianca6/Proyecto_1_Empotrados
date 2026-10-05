@@ -1,0 +1,12 @@
+[Unit]
+Description=Servidor web del robot (uhttpd + CGI)
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/sbin/uhttpd -f -h /www -p 0.0.0.0:80 -x /cgi-bin
+Restart=on-failure
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target

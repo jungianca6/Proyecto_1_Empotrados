@@ -74,3 +74,15 @@ Formato: `tipo(alcance): descripción`
 
 ### 5.3. Pull Requests
 * Todo PR debe estar vinculado a un **Issue**.
+
+## 6. Aplicación móvil
+
+La app Android/iOS está en [`mobile/`](mobile/README.md) y utiliza React Native con Expo. Para iniciarla en una estación con Node.js LTS:
+
+```bash
+cd mobile
+npm install
+npm start
+```
+
+La app ofrece inicio de sesión, control manual/autónomo, lecturas de sensores, mapa 2D, estado de LEDs y controles de audio. Para usarla con el robot, configura la URL del servidor de la Raspberry Pi en la pantalla de acceso. Los endpoints CGI actuales son prototipos y deben integrarse con `librobot` antes de controlar hardware real.

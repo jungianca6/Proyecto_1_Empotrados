@@ -8,13 +8,16 @@ add_library(robot SHARED
     src/sensors.c
     src/fsm.c
     src/gpio.c
+    src/leds.c
 )
 
 install(TARGETS robot DESTINATION lib)
-install(FILES 
-    include/motors.h 
-    include/sensors.h 
-    include/fsm.h 
-    include/gpio.h 
+
+install(FILES
+    include/motors.h
+    include/sensors.h
+    include/fsm.h
+    include/gpio.h
+    include/leds.h
     DESTINATION include
 )

@@ -1,4 +1,5 @@
 #!/bin/sh
+
 mount -o remount,rw /
 
 LOG="/etc/wifi_log.txt"
@@ -21,4 +22,69 @@ wpa_supplicant -B -i wlan0 -c /etc/wpa_supplicant/wpa_supplicant.conf >> $LOG 2>
 sleep 2
 
 # Solicitar IP por DHCP al celular
-udhcpc -i wlan0 >> $LOG 2>&1
+udhcpc -i wlan0 >> $LOG 2>&1 &
+
+
+# ============================================================
+# DIAGNOSTICO TEMPORAL
+# ============================================================
+
+(
+    sleep 15
+
+    {
+        echo ""
+        echo "========================================"
+        echo "===== DIAGNOSTICO WIFI ====="
+        echo "========================================"
+        date
+
+        echo ""
+        echo "--- PID 1 ---"
+        ps -p 1 -o pid,comm,args 2>&1
+
+        echo ""
+        echo "--- INIT ---"
+        readlink -f /sbin/init 2>&1
+
+        echo ""
+        echo "--- WLAN ---"
+        ip link show wlan0 2>&1
+        ip addr show wlan0 2>&1
+
+        echo ""
+        echo "--- PROCESOS WIFI ---"
+        ps 2>&1 | grep -E 'wpa_supplicant|udhcpc|NetworkManager|connman|systemd-networkd' | grep -v grep
+
+        echo ""
+        echo "--- SYSTEMD ---"
+        if command -v systemctl >/dev/null 2>&1; then
+            systemctl is-system-running 2>&1
+            systemctl list-units --type=service 2>&1
+        else
+            echo "systemctl no disponible"
+        fi
+
+        echo ""
+        echo "--- WPA STATUS ---"
+        if command -v wpa_cli >/dev/null 2>&1; then
+            wpa_cli -i wlan0 status 2>&1
+        else
+            echo "wpa_cli no disponible"
+        fi
+
+        echo ""
+        echo "--- MODULOS WIFI ---"
+        lsmod 2>&1 | grep -E 'brcm|cfg80211'
+
+        echo ""
+        echo "--- KERNEL WIFI ---"
+        dmesg 2>&1 | grep -Ei 'brcm|brcmfmac|wlan|firmware'
+
+        echo ""
+        echo "--- FIN DIAGNOSTICO ---"
+    } >> "$LOG" 2>&1
+
+) &
+
+exit 0

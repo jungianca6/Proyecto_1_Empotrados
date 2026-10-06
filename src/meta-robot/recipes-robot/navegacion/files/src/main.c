@@ -6,20 +6,10 @@
 #include "sensors.h"
 #include "fsm.h"
 #include "leds.h"
+#include "brushes.h"
 
-/*
- * Bandera global utilizada para terminar el programa
- * de forma segura cuando se recibe SIGINT o SIGTERM.
- */
 static volatile sig_atomic_t running = 1;
 
-/*
- * Manejador de señales.
- *
- * No se realizan operaciones de hardware aquí;
- * únicamente se cambia la bandera para que el
- * bucle principal pueda finalizar ordenadamente.
- */
 static void handle_signal(int signal_number)
 {
     (void)signal_number;
@@ -28,10 +18,6 @@ static void handle_signal(int signal_number)
 
 int main(void)
 {
-    /*
-     * Permitir que el programa pueda detenerse
-     * correctamente desde el sistema.
-     */
     signal(SIGINT, handle_signal);
     signal(SIGTERM, handle_signal);
 
@@ -48,9 +34,19 @@ int main(void)
     led_obstacle_set(0);
 
     /*
-     * Inicializar motores y sensores.
+     * Inicializar cepillos.
+     */
+    if (brushes_init() != 0) {
+        led_system_set(0);
+        leds_cleanup();
+        return 1;
+    }
+
+    /*
+     * Inicializar motores de movimiento y sensores.
      */
     if (motors_init() != 0 || sensors_init() != 0) {
+        brushes_cleanup();
         led_system_set(0);
         leds_cleanup();
         return 1;
@@ -59,7 +55,7 @@ int main(void)
     fsm_init();
 
     /*
-     * Espera de seguridad antes del movimiento.
+     * Espera de seguridad antes de iniciar movimiento.
      */
     sleep(3);
 
@@ -69,13 +65,16 @@ int main(void)
     led_autonomous_set(1);
     led_manual_set(0);
 
-    fsm_update(EVENT_START);
+    /*
+     * Encender los dos cepillos.
+     */
+    brushes_on();
 
     /*
-     * Navegación autónoma continua.
-     *
-     * La FSM se actualiza cada 10 ms.
+     * Iniciar navegación autónoma.
      */
+    fsm_update(EVENT_START);
+
     while (running) {
         fsm_update(EVENT_NONE);
         usleep(10000);
@@ -86,12 +85,15 @@ int main(void)
      */
     fsm_update(EVENT_STOP);
 
+    brushes_off();
+
     led_obstacle_set(0);
     led_autonomous_set(0);
     led_manual_set(0);
     led_system_set(0);
 
     motors_cleanup();
+    brushes_cleanup();
     leds_cleanup();
 
     return 0;

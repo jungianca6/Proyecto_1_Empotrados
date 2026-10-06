@@ -11,6 +11,7 @@ SRC_URI = " \
     file://include/gpio.h \
     file://include/leds.h \
     file://include/brushes.h \
+    file://include/vacuum.h \
     file://src/librobot.c \
     file://src/motors.c \
     file://src/sensors.c \
@@ -18,6 +19,7 @@ SRC_URI = " \
     file://src/gpio.c \
     file://src/leds.c \
     file://src/brushes.c \
+    file://src/vacuum.c \
 "
 
 S = "${WORKDIR}"

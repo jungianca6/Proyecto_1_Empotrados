@@ -7,6 +7,7 @@
 #include "fsm.h"
 #include "leds.h"
 #include "brushes.h"
+#include "vacuum.h"
 
 static volatile sig_atomic_t running = 1;
 
@@ -43,15 +44,29 @@ int main(void)
     }
 
     /*
-     * Inicializar motores de movimiento y sensores.
+     * Inicializar motor de aspiración.
      */
-    if (motors_init() != 0 || sensors_init() != 0) {
+    if (vacuum_init() != 0) {
         brushes_cleanup();
         led_system_set(0);
         leds_cleanup();
         return 1;
     }
 
+    /*
+     * Inicializar motores de movimiento y sensores.
+     */
+    if (motors_init() != 0 || sensors_init() != 0) {
+        vacuum_cleanup();
+        brushes_cleanup();
+        led_system_set(0);
+        leds_cleanup();
+        return 1;
+    }
+
+    /*
+     * Inicializar máquina de estados.
+     */
     fsm_init();
 
     /*
@@ -66,9 +81,10 @@ int main(void)
     led_manual_set(0);
 
     /*
-     * Encender los dos cepillos.
+     * Encender cepillos y aspiración.
      */
     brushes_on();
+    vacuum_on();
 
     /*
      * Iniciar navegación autónoma.
@@ -86,6 +102,7 @@ int main(void)
     fsm_update(EVENT_STOP);
 
     brushes_off();
+    vacuum_off();
 
     led_obstacle_set(0);
     led_autonomous_set(0);
@@ -93,6 +110,7 @@ int main(void)
     led_system_set(0);
 
     motors_cleanup();
+    vacuum_cleanup();
     brushes_cleanup();
     leds_cleanup();
 

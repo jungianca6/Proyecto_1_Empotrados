@@ -10,6 +10,7 @@ add_library(robot SHARED
     src/gpio.c
     src/leds.c
     src/brushes.c
+    src/vacuum.c
 )
 
 install(TARGETS robot DESTINATION lib)
@@ -22,5 +23,6 @@ install(FILES
     include/gpio.h
     include/leds.h
     include/brushes.h
+    include/vacuum.h
     DESTINATION include
 )

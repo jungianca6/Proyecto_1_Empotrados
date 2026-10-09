@@ -3,13 +3,12 @@
 
 #define GPIO_BASE 512
 
-// Pines BCM para habilitación y dirección de motores
-#define GPIO_ENA 12  // Pin físico 32 -> Sysfs 524
-#define GPIO_ENB 13  // Pin físico 33 -> Sysfs 525
-#define GPIO_IN1 17  // Pin físico 11 -> Sysfs 529
-#define GPIO_IN2 27  // Pin físico 13 -> Sysfs 539
-#define GPIO_IN3 22  // Pin físico 15 -> Sysfs 534
-#define GPIO_IN4 23  // Pin físico 16 -> Sysfs 535
+#define GPIO_ENA 12
+#define GPIO_ENB 13
+#define GPIO_IN1 17
+#define GPIO_IN2 27
+#define GPIO_IN3 22
+#define GPIO_IN4 23
 
 typedef enum {
     ROBOT_STOP = 0,
@@ -20,7 +19,14 @@ typedef enum {
 } RobotDirection;
 
 int motors_init(void);
-void robot_move(RobotDirection dir, int speed_pct); // speed_pct > 0 activa los motores al 100%
+
+/*
+ * En esta versión no se usa PWM.
+ * speed_pct <= 0 apaga los motores.
+ * speed_pct > 0 activa los motores a potencia completa.
+ */
+void robot_move(RobotDirection dir, int speed_pct);
+
 void motors_cleanup(void);
 
-#endif // MOTORS_H
+#endif

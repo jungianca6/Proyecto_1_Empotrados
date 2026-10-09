@@ -10,23 +10,24 @@ add_library(robot SHARED
     src/fsm.c
     src/gpio.c
     src/leds.c
+    src/brushes.c
+    src/vacuum.c
 )
 
 set_target_properties(robot PROPERTIES
     OUTPUT_NAME "robot"
 )
 
-install(
-    TARGETS robot
-    LIBRARY DESTINATION lib
-)
+install(TARGETS robot DESTINATION lib)
 
-install(FILES 
+install(FILES
     include/librobot.h
-    include/motors.h 
-    include/sensors.h 
-    include/fsm.h 
+    include/motors.h
+    include/sensors.h
+    include/fsm.h
     include/gpio.h
     include/leds.h
+    include/brushes.h
+    include/vacuum.h
     DESTINATION include
 )

@@ -1,41 +1,57 @@
-SUMMARY = "Configuracion e inicio automatico de Wi-Fi y llave SSH"
+SUMMARY = "Configuracion automatica de Wi-Fi y llave SSH"
 LICENSE = "CLOSED"
 
 SRC_URI = " \
     file://robot-wifi.init \
+    file://robot-wifi.service \
+    file://25-wlan0.network \
     file://wpa_supplicant.conf \
     file://authorized_keys \
 "
 
 S = "${WORKDIR}"
 
+inherit systemd
+
+SYSTEMD_SERVICE:${PN} = "robot-wifi.service"
+SYSTEMD_AUTO_ENABLE:${PN} = "enable"
+
 do_install() {
-    # 1. Instalar el script en /etc/init.d/
-    install -d ${D}${sysconfdir}/init.d
-    install -m 0755 ${WORKDIR}/robot-wifi.init ${D}${sysconfdir}/init.d/wifi_start.sh
+    # Script de arranque Wi-Fi
+    install -d ${D}${sbindir}
+    install -m 0755 \
+        ${WORKDIR}/robot-wifi.init \
+        ${D}${sbindir}/robot-wifi-start
 
-    # 2. Crear enlaces simbolicos de arranque directamente en la imagen
-    install -d ${D}${sysconfdir}/rcS.d
-    install -d ${D}${sysconfdir}/rc3.d
-    install -d ${D}${sysconfdir}/rc5.d
-    ln -sf ../init.d/wifi_start.sh ${D}${sysconfdir}/rcS.d/S99wifi_start.sh
-    ln -sf ../init.d/wifi_start.sh ${D}${sysconfdir}/rc3.d/S99wifi_start.sh
-    ln -sf ../init.d/wifi_start.sh ${D}${sysconfdir}/rc5.d/S99wifi_start.sh
-
-    # 3. Instalar configuracion de Wi-Fi
+    # Configuracion wpa_supplicant
     install -d ${D}${sysconfdir}/wpa_supplicant
-    install -m 0600 ${WORKDIR}/wpa_supplicant.conf ${D}${sysconfdir}/wpa_supplicant/wpa_supplicant.conf
+    install -m 0600 \
+        ${WORKDIR}/wpa_supplicant.conf \
+        ${D}${sysconfdir}/wpa_supplicant/wpa_supplicant.conf
 
-    # 4. Instalar llave SSH
+    # Configuracion systemd-networkd
+    install -d ${D}${sysconfdir}/systemd/network
+    install -m 0644 \
+        ${WORKDIR}/25-wlan0.network \
+        ${D}${sysconfdir}/systemd/network/25-wlan0.network
+
+    # Servicio systemd
+    install -d ${D}${systemd_system_unitdir}
+    install -m 0644 \
+        ${WORKDIR}/robot-wifi.service \
+        ${D}${systemd_system_unitdir}/robot-wifi.service
+
+    # Llave SSH
     install -d ${D}/root/.ssh
-    install -m 0600 ${WORKDIR}/authorized_keys ${D}/root/.ssh/authorized_keys
+    install -m 0600 \
+        ${WORKDIR}/authorized_keys \
+        ${D}/root/.ssh/authorized_keys
 }
 
 FILES:${PN} += " \
-    ${sysconfdir}/init.d/wifi_start.sh \
-    ${sysconfdir}/rcS.d/S99wifi_start.sh \
-    ${sysconfdir}/rc3.d/S99wifi_start.sh \
-    ${sysconfdir}/rc5.d/S99wifi_start.sh \
+    ${sbindir}/robot-wifi-start \
     ${sysconfdir}/wpa_supplicant/wpa_supplicant.conf \
+    ${sysconfdir}/systemd/network/25-wlan0.network \
+    ${systemd_system_unitdir}/robot-wifi.service \
     /root/.ssh/authorized_keys \
 "

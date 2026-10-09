@@ -1,0 +1,12 @@
+[Unit]
+Description=Configuracion Wi-Fi del robot
+After=systemd-networkd.service
+Wants=systemd-networkd.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/sbin/robot-wifi-start
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

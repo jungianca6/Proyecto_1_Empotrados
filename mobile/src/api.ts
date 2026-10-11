@@ -74,6 +74,8 @@ export function createRobotApi(serverUrl: string, token?: string) {
     login: (username: string, password: string) =>
       request<never>("login", "POST", { username, password }),
     status: () => request<RobotStatus>("status"),
+    getMode: () => request<{ mode: RobotMode }>("mode"),
+
     async sensors() {
       const result = await request<ServerSensors>("sensors");
       return {

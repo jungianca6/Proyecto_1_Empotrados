@@ -46,7 +46,7 @@ function App() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [connected, setConnected] = useState(false);
-  const [mode, setMode] = useState<RobotMode>("manual");
+  const [mode, setMode] = useState<RobotMode>("autonomous");
   const [status, setStatus] = useState<RobotStatus>({ motor: "stopped" });
   const [sensors, setSensors] = useState<SensorData>({});
   const [leds, setLeds] = useState<LedData>({});
@@ -62,9 +62,10 @@ function App() {
 
     async function refresh() {
       try {
-        const [statusResult, sensorResult, ledResult, mapResult, songResult] =
+        const [statusResult, modeResult, sensorResult, ledResult, mapResult, songResult] =
           await Promise.all([
             api.status(),
+            api.getMode(),
             api.sensors(),
             api.leds(),
             api.map(),
@@ -76,7 +77,7 @@ function App() {
             ...statusResult.data,
             motor: statusResult.data?.motor ?? current.motor ?? "stopped",
           }));
-          if (statusResult.data.mode) setMode(statusResult.data.mode);
+          if (modeResult.data?.mode) setMode(modeResult.data.mode);
         }
         if (sensorResult.data) setSensors(sensorResult.data);
         if (ledResult.data) setLeds(ledResult.data);

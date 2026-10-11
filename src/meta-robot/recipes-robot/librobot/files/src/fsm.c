@@ -242,8 +242,18 @@ void fsm_update(RobotEvent event)
             break;
 
         case STATE_STOPPED:
-            led_obstacle_set(0);
-            robot_move(ROBOT_STOP, 0);
+            if (event == EVENT_START) {
+                current_state = STATE_MOVING_FORWARD;
+                state_entry_time = now;
+
+                led_obstacle_set(0);
+
+                robot_move(ROBOT_FORWARD, MOTOR_SPEED);
+            }
+            else {
+                led_obstacle_set(0);
+                robot_move(ROBOT_STOP, 0);
+            }
             break;
 
         case STATE_EMERGENCY:

@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <signal.h>
+#include <string.h>
 
 #include "motors.h"
 #include "sensors.h"
@@ -8,6 +9,8 @@
 #include "leds.h"
 #include "brushes.h"
 #include "vacuum.h"
+
+#define MODE_FILE "/tmp/robot_mode"
 
 static volatile sig_atomic_t running = 1;
 
@@ -17,14 +20,31 @@ static void handle_signal(int signal_number)
     running = 0;
 }
 
+static int is_manual_mode(void)
+{
+    FILE *f = fopen(MODE_FILE, "r");
+
+    if (!f) {
+        return 0; // por defecto autónomo
+    }
+
+    char mode[32] = {0};
+
+    if (fscanf(f, "%31s", mode) != 1) {
+        fclose(f);
+        return 0;
+    }
+
+    fclose(f);
+
+    return strcmp(mode, "manual") == 0;
+}
+
 int main(void)
 {
     signal(SIGINT, handle_signal);
     signal(SIGTERM, handle_signal);
 
-    /*
-     * Inicializar LEDs.
-     */
     if (leds_init() != 0) {
         return 1;
     }
@@ -34,18 +54,12 @@ int main(void)
     led_manual_set(0);
     led_obstacle_set(0);
 
-    /*
-     * Inicializar cepillos.
-     */
     if (brushes_init() != 0) {
         led_system_set(0);
         leds_cleanup();
         return 1;
     }
 
-    /*
-     * Inicializar motor de aspiración.
-     */
     if (vacuum_init() != 0) {
         brushes_cleanup();
         led_system_set(0);
@@ -53,9 +67,6 @@ int main(void)
         return 1;
     }
 
-    /*
-     * Inicializar motores de movimiento y sensores.
-     */
     if (motors_init() != 0 || sensors_init() != 0) {
         vacuum_cleanup();
         brushes_cleanup();
@@ -64,41 +75,63 @@ int main(void)
         return 1;
     }
 
-    /*
-     * Inicializar máquina de estados.
-     */
     fsm_init();
 
-    /*
-     * Espera de seguridad antes de iniciar movimiento.
-     */
     sleep(3);
 
-    /*
-     * Activar modo autónomo.
-     */
-    led_autonomous_set(1);
-    led_manual_set(0);
-
-    /*
-     * Encender cepillos y aspiración.
-     */
     brushes_on();
     vacuum_on();
 
-    /*
-     * Iniciar navegación autónoma.
-     */
-    fsm_update(EVENT_START);
+    int manual_mode = is_manual_mode();
+
+    if (manual_mode) {
+        led_autonomous_set(0);
+        led_manual_set(1);
+    } else {
+        led_autonomous_set(1);
+        led_manual_set(0);
+        fsm_update(EVENT_START);
+    }
 
     while (running) {
-        fsm_update(EVENT_NONE);
+        int new_manual_mode = is_manual_mode();
+
+        if (new_manual_mode != manual_mode) {
+
+            /*
+             * Cambió de autónomo a manual.
+             */
+            if (new_manual_mode) {
+                fsm_update(EVENT_STOP);
+
+                led_autonomous_set(0);
+                led_manual_set(1);
+                led_obstacle_set(0);
+            }
+
+            /*
+             * Cambió de manual a autónomo.
+             */
+            else {
+                led_manual_set(0);
+                led_autonomous_set(1);
+
+                fsm_update(EVENT_START);
+            }
+
+            manual_mode = new_manual_mode;
+        }
+
+        /*
+         * Solo ejecutar la FSM en modo autónomo.
+         */
+        if (!manual_mode) {
+            fsm_update(EVENT_NONE);
+        }
+
         usleep(10000);
     }
 
-    /*
-     * Apagado seguro.
-     */
     fsm_update(EVENT_STOP);
 
     brushes_off();

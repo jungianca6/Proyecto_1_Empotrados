@@ -1,24 +1,176 @@
 #!/bin/sh
-mount -o remount,rw /
 
 LOG="/etc/wifi_log.txt"
-echo "=== INICIO WI-FI HOTSPOT ===" > $LOG
 
-depmod -a >> $LOG 2>&1
-modprobe cfg80211 >> $LOG 2>&1
-modprobe brcmutil >> $LOG 2>&1
-modprobe brcmfmac >> $LOG 2>&1
+mount -o remount,rw / 2>/dev/null
 
-sleep 2
+echo "========================================" > "$LOG"
+echo "=== INICIO WI-FI ROBOT ===" >> "$LOG"
+echo "========================================" >> "$LOG"
 
-killall wpa_supplicant udhcpc > /dev/null 2>&1
+echo "" >> "$LOG"
+echo "--- Cargando modulos Wi-Fi ---" >> "$LOG"
+
+depmod -a >> "$LOG" 2>&1
+modprobe cfg80211 >> "$LOG" 2>&1
+modprobe brcmutil >> "$LOG" 2>&1
+modprobe brcmfmac >> "$LOG" 2>&1
+
+#
+# Esperar a que wlan0 exista.
+#
+echo "" >> "$LOG"
+echo "--- Esperando wlan0 ---" >> "$LOG"
+
+i=0
+while [ "$i" -lt 20 ]; do
+    if ip link show wlan0 >/dev/null 2>&1; then
+        echo "wlan0 disponible" >> "$LOG"
+        break
+    fi
+
+    sleep 1
+    i=$((i + 1))
+done
+
+if ! ip link show wlan0 >/dev/null 2>&1; then
+    echo "ERROR: wlan0 no aparecio" >> "$LOG"
+    exit 1
+fi
+
+#
+# Levantar interfaz.
+#
+ip link set wlan0 up >> "$LOG" 2>&1
+
+#
+# Detener una instancia anterior de wpa_supplicant.
+#
+killall wpa_supplicant >/dev/null 2>&1 || true
 rm -rf /var/run/wpa_supplicant
 
-ifconfig wlan0 up >> $LOG 2>&1
 sleep 1
 
-wpa_supplicant -B -i wlan0 -c /etc/wpa_supplicant/wpa_supplicant.conf >> $LOG 2>&1
-sleep 2
+#
+# Iniciar WPA.
+#
+echo "" >> "$LOG"
+echo "--- Iniciando wpa_supplicant ---" >> "$LOG"
 
-# Solicitar IP por DHCP al celular
-udhcpc -i wlan0 >> $LOG 2>&1
+wpa_supplicant \
+    -B \
+    -i wlan0 \
+    -c /etc/wpa_supplicant/wpa_supplicant.conf \
+    >> "$LOG" 2>&1
+
+#
+# Esperar autenticacion con el hotspot.
+#
+echo "" >> "$LOG"
+echo "--- Esperando conexion al hotspot ---" >> "$LOG"
+
+i=0
+CONNECTED=0
+
+while [ "$i" -lt 30 ]; do
+
+    if wpa_cli -i wlan0 status 2>/dev/null | grep -q "wpa_state=COMPLETED"; then
+        echo "Wi-Fi conectado correctamente" >> "$LOG"
+        CONNECTED=1
+        break
+    fi
+
+    sleep 1
+    i=$((i + 1))
+done
+
+if [ "$CONNECTED" -ne 1 ]; then
+    echo "ERROR: wpa_supplicant no logro conectarse" >> "$LOG"
+
+    echo "" >> "$LOG"
+    wpa_cli -i wlan0 status >> "$LOG" 2>&1
+
+    exit 1
+fi
+
+#
+# systemd-networkd se encarga del DHCP.
+#
+echo "" >> "$LOG"
+echo "--- Solicitando configuracion a systemd-networkd ---" >> "$LOG"
+
+if command -v networkctl >/dev/null 2>&1; then
+    networkctl reload >> "$LOG" 2>&1
+    networkctl reconfigure wlan0 >> "$LOG" 2>&1
+fi
+
+#
+# Esperar direccion IPv4.
+#
+echo "" >> "$LOG"
+echo "--- Esperando direccion IPv4 ---" >> "$LOG"
+
+i=0
+HAS_IPV4=0
+
+while [ "$i" -lt 30 ]; do
+
+    if ip -4 addr show wlan0 | grep -q "inet "; then
+        HAS_IPV4=1
+        break
+    fi
+
+    sleep 1
+    i=$((i + 1))
+done
+
+#
+# Diagnostico final.
+#
+{
+    echo ""
+    echo "========================================"
+    echo "===== ESTADO FINAL WIFI ====="
+    echo "========================================"
+
+    echo ""
+    echo "--- WPA STATUS ---"
+    wpa_cli -i wlan0 status 2>&1
+
+    echo ""
+    echo "--- WLAN0 ---"
+    ip link show wlan0 2>&1
+
+    echo ""
+    echo "--- IPv4 ---"
+    ip -4 addr show wlan0 2>&1
+
+    echo ""
+    echo "--- RUTAS ---"
+    ip route 2>&1
+
+    echo ""
+    echo "--- NETWORKD ---"
+
+    if command -v networkctl >/dev/null 2>&1; then
+        networkctl status wlan0 2>&1
+    else
+        echo "networkctl no disponible"
+    fi
+
+    echo ""
+    echo "--- MODULOS WIFI ---"
+    lsmod 2>&1 | grep -E 'brcm|cfg80211'
+
+    echo ""
+    echo "--- FIN ---"
+
+} >> "$LOG" 2>&1
+
+if [ "$HAS_IPV4" -eq 1 ]; then
+    echo "Wi-Fi listo con IPv4" >> "$LOG"
+    exit 0
+fi
+
+echo "ERROR: Wi-Fi conectado pero sin IPv4" >> "$LOG"
+exit 1

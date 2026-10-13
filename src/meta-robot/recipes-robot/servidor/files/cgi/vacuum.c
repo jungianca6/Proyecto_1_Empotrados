@@ -16,15 +16,19 @@ static void respond(int status, const char *reason, const char *json)
     printf("%s\n", json);
 }
 
+
 static int authorized(void)
 {
     const char *header = getenv("HTTP_AUTHORIZATION");
-    const char *prefix = "Bearer ";
 
-    if (header == NULL || strncmp(header, prefix, strlen(prefix)) != 0)
+    if (header == NULL || *header == '\0')
         return 0;
 
-    const char *token = header + strlen(prefix);
+    /* Aceptar tanto "Bearer <token>" como "<token>". */
+    const char *token = header;
+
+    if (strncmp(header, "Bearer ", 7) == 0)
+        token = header + 7;
 
     if (*token == '\0')
         return 0;

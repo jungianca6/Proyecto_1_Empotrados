@@ -24,6 +24,8 @@ set(CGI_PROGRAMS
     audiostop
     audiovolume
     map
+    brushes
+    vacuum
 )
 
 find_package(PkgConfig REQUIRED)

@@ -44,6 +44,7 @@ DEPENDS = " \
 RDEPENDS:${PN} += " \
     uhttpd \
     sqlite3 \
+    mpg123 \
 "
 
 inherit cmake pkgconfig systemd

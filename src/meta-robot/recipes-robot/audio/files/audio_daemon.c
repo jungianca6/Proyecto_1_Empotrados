@@ -17,6 +17,7 @@
 #define AUDIO_SOCKET_PATH "/run/robot-audio.sock"
 #endif
 #define COMMAND_SIZE 1024
+#define STARTUP_SOUND "/usr/share/robot-audio/system-start.mp3"
 
 static volatile sig_atomic_t running = 1;
 
@@ -89,7 +90,7 @@ int main(void)
     sigaction(SIGTERM, &action, NULL);
     signal(SIGPIPE, SIG_IGN);
 
-    if (audio_init("default") < 0) {
+    if (audio_init("plughw:CARD=Headphones,DEV=0") < 0) {
         fprintf(stderr, "No se pudo inicializar el audio\n");
         return EXIT_FAILURE;
     }
@@ -114,6 +115,8 @@ int main(void)
         return EXIT_FAILURE;
     }
     chmod(AUDIO_SOCKET_PATH, 0660);
+    
+
 
     while (running) {
         int client = accept(server, NULL, NULL);

@@ -14,6 +14,7 @@ SRC_URI = " \
     file://audioctl.c \
     file://robot_audio.h \
     file://robot-audio.service \
+    file://robot-audio-startup.service \
     file://notifications/system-start.mp3 \
     file://notifications/autonomous-start.mp3 \
     file://notifications/obstacle.mp3 \
@@ -28,14 +29,20 @@ inherit cmake pkgconfig systemd
 
 EXTRA_OECMAKE += "-DBUILD_TESTING=OFF -DSYSTEMD_UNIT_DIR=${systemd_system_unitdir}"
 
-RDEPENDS:${PN} = "alsa-lib"
+RDEPENDS:${PN} = "alsa-lib mpg123"
 
-SYSTEMD_SERVICE:${PN} = "robot-audio.service"
-SYSTEMD_AUTO_ENABLE = "enable"
+SYSTEMD_SERVICE:${PN} = "robot-audio.service robot-audio-startup.service"
+SYSTEMD_AUTO_ENABLE:${PN} = "enable"
 
 do_install:append() {
     install -d ${D}${datadir}/robot-audio
-    install -m 0644 ${WORKDIR}/notifications/*.mp3 ${D}${datadir}/robot-audio/
+    install -d ${D}${systemd_system_unitdir}
+
+    install -m 0644 ${WORKDIR}/notifications/*.mp3 \
+        ${D}${datadir}/robot-audio/
+
+    install -m 0644 ${WORKDIR}/robot-audio-startup.service \
+        ${D}${systemd_system_unitdir}/robot-audio-startup.service
 }
 
 FILES:${PN} += " \
@@ -44,6 +51,7 @@ FILES:${PN} += " \
     ${bindir}/audio-daemon \
     ${bindir}/audioctl \
     ${systemd_system_unitdir}/robot-audio.service \
+    ${systemd_system_unitdir}/robot-audio-startup.service \
     ${datadir}/robot-audio/*.mp3 \
 "
 

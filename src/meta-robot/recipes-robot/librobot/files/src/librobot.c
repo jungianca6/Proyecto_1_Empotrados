@@ -1,5 +1,6 @@
 #include "librobot.h"
-
+#include "brushes.h"
+#include "vacuum.h"
 
 /* ============================================================
  * MOTORES
@@ -140,6 +141,37 @@ int robot_audio_set_volume(int volume)
     return -1;
 }
 
+/* ============================================================
+ * CEPILLOS
+ * ============================================================ */
+
+int robot_brushes_on(void)
+{
+    brushes_on();
+    return 0;
+}
+
+int robot_brushes_off(void)
+{
+    brushes_off();
+    return 0;
+}
+
+/* ============================================================
+ * MOTOR DE ASPIRACION
+ * ============================================================ */
+
+int robot_vacuum_on(void)
+{
+    vacuum_on();
+    return 0;
+}
+
+int robot_vacuum_off(void)
+{
+    vacuum_off();
+    return 0;
+}
 
 /* ============================================================
  * NAVEGACIÓN / FSM

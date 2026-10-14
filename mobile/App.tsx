@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
+  Dimensions,
   Pressable,
   SafeAreaView,
   ScrollView,
@@ -279,17 +280,26 @@ function App() {
 
         <View style={styles.sectionHeadingRow}><Text style={styles.sectionTitle}>Mapa de recorrido</Text><Text style={styles.sectionMeta}>GRILLA 2D</Text></View>
         <View style={styles.mapPanel}>
-          <View style={styles.mapTopline}><Text style={styles.mapCaption}>ÁREA EXPLORADA</Text><Text style={styles.mapCoordinate}>{robotMap.width} × {robotMap.height}</Text></View>
-          <View style={styles.mapGrid}>
-            {Array.from({ length: robotMap.height }, (_, row) => (
-              <View key={`row-${row}`} style={styles.mapRow}>
-                {Array.from({ length: robotMap.width }, (_, column) => {
-                  const value = robotMap.cells[row]?.[column] ?? 0;
-                  return <View key={`${row}-${column}`} style={[styles.mapCell, value === 1 && styles.mapVisited, value === 2 && styles.mapObstacle, value === 3 && styles.mapRobot]}>{value === 3 ? <View style={styles.mapRobotCore} /> : null}</View>;
-                })}
+          <View style={styles.mapTopline}><Text style={styles.mapCaption}>ÁREA EXPLORADA</Text><Text style={styles.mapCoordinate}>{robotMap.scaleCm ? `${robotMap.scaleCm} cm por celda · ` : ""}{robotMap.width} × {robotMap.height}</Text></View>
+          {(() => {
+            // Tamano de celda segun el numero de columnas, para que quepa en pantalla.
+            const gap = robotMap.width > 12 ? 1 : 4;
+            const available = Dimensions.get("window").width - 90;
+            const size = Math.max(4, Math.min(32, Math.floor((available - gap * (robotMap.width - 1)) / robotMap.width)));
+            const core = Math.max(3, Math.round(size * 0.3));
+            return (
+              <View style={[styles.mapGrid, { gap }]}>
+                {Array.from({ length: robotMap.height }, (_, row) => (
+                  <View key={`row-${row}`} style={[styles.mapRow, { gap }]}>
+                    {Array.from({ length: robotMap.width }, (_, column) => {
+                      const value = robotMap.cells[row]?.[column] ?? 0;
+                      return <View key={`${row}-${column}`} style={[styles.mapCell, { width: size, borderWidth: size < 10 ? 0 : 1 }, value === 1 && styles.mapVisited, value === 2 && styles.mapObstacle, value === 3 && styles.mapRobot]}>{value === 3 ? <View style={[styles.mapRobotCore, { width: core, height: core, borderRadius: core / 2 }]} /> : null}</View>;
+                    })}
+                  </View>
+                ))}
               </View>
-            ))}
-          </View>
+            );
+          })()}
           <View style={styles.legend}><LegendItem color={colors.cellVisited} label="Visitada" /><LegendItem color={colors.cellObstacle} label="Obstáculo" /><LegendItem color={colors.cellUnknown} label="Desconocida" /></View>
         </View>
 

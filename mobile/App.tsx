@@ -172,7 +172,19 @@ function App() {
   function chooseMode(nextMode: RobotMode) {
     void sendCommand(
       () => createRobotApi(serverUrl, token).setMode(nextMode),
-      () => setMode(nextMode),
+      () => {
+        setMode(nextMode);
+
+        if (nextMode === "manual") {
+          setBrushesOn(false);
+          setVacuumOn(false);
+        }
+
+        if (nextMode === "autonomous") {
+          setBrushesOn(false);
+          setVacuumOn(false);
+        }
+      },
     );
   }
 

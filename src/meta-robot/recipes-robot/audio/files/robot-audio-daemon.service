@@ -1,0 +1,12 @@
+[Unit]
+Description=Daemon de audio del robot
+After=sound.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/audio-daemon
+Restart=on-failure
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target

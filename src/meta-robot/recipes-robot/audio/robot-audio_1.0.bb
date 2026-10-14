@@ -13,7 +13,7 @@ SRC_URI = " \
     file://audio_daemon.c \
     file://audioctl.c \
     file://robot_audio.h \
-    file://robot-audio.service \
+    file://robot-audio-daemon.service \
     file://robot-audio-startup.service \
     file://notifications/system-start.mp3 \
     file://notifications/autonomous-start.mp3 \
@@ -31,7 +31,7 @@ EXTRA_OECMAKE += "-DBUILD_TESTING=OFF -DSYSTEMD_UNIT_DIR=${systemd_system_unitdi
 
 RDEPENDS:${PN} = "alsa-lib mpg123"
 
-SYSTEMD_SERVICE:${PN} = "robot-audio.service robot-audio-startup.service"
+SYSTEMD_SERVICE:${PN} = "robot-audio-daemon.service robot-audio-startup.service"
 SYSTEMD_AUTO_ENABLE:${PN} = "enable"
 
 do_install:append() {
@@ -50,7 +50,7 @@ FILES:${PN} += " \
     ${bindir}/audio-test \
     ${bindir}/audio-daemon \
     ${bindir}/audioctl \
-    ${systemd_system_unitdir}/robot-audio.service \
+    ${systemd_system_unitdir}/robot-audio-daemon.service \
     ${systemd_system_unitdir}/robot-audio-startup.service \
     ${datadir}/robot-audio/*.mp3 \
 "

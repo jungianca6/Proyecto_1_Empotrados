@@ -54,4 +54,4 @@ install(TARGETS robot-audio
 )
 install(TARGETS audio-test RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 install(TARGETS audio-daemon audioctl RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
-install(FILES robot-audio.service DESTINATION ${SYSTEMD_UNIT_DIR})
+install(FILES robot-audio-daemon.service DESTINATION ${SYSTEMD_UNIT_DIR})

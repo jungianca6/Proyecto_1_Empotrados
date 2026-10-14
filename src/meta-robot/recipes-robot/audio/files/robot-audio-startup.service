@@ -1,10 +1,18 @@
 [Unit]
-Description=Prueba de audio de inicio
+Description=Diagnostico de audio del robot
 After=sound.target
 
 [Service]
 Type=oneshot
-ExecStart=/bin/sh -c 'echo "=== AUDIO DIAG ===" > /etc/audio-startup.log; echo "--- cards ---" >> /etc/audio-startup.log; cat /proc/asound/cards >> /etc/audio-startup.log 2>&1; echo "--- pcm ---" >> /etc/audio-startup.log; cat /proc/asound/pcm >> /etc/audio-startup.log 2>&1; echo "--- dev snd ---" >> /etc/audio-startup.log; ls -l /dev/snd >> /etc/audio-startup.log 2>&1; echo "--- mpg123 ---" >> /etc/audio-startup.log; /usr/bin/mpg123 -v /usr/share/robot-audio/system-start.mp3 >> /etc/audio-startup.log 2>&1'
+ExecStart=/bin/sh -c '\
+    echo "=== AUDIO DIAG ===" > /etc/audio-startup.log; \
+    echo "--- cards ---" >> /etc/audio-startup.log; \
+    cat /proc/asound/cards >> /etc/audio-startup.log 2>&1; \
+    echo "--- pcm ---" >> /etc/audio-startup.log; \
+    cat /proc/asound/pcm >> /etc/audio-startup.log 2>&1; \
+    echo "--- dev snd ---" >> /etc/audio-startup.log; \
+    ls -l /dev/snd >> /etc/audio-startup.log 2>&1 \
+'
 
 [Install]
 WantedBy=multi-user.target

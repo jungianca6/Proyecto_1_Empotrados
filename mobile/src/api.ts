@@ -1,9 +1,15 @@
 export type RobotMode = "autonomous" | "manual";
+export type CleaningState = "on" | "off";
 
 export type RobotStatus = {
   mode?: RobotMode;
   motor?: string;
   server?: string;
+};
+
+
+export type CleaningControl = {
+  state: CleaningState;
 };
 
 export type SensorData = {
@@ -105,6 +111,10 @@ export function createRobotApi(serverUrl: string, token?: string) {
     setMode: (mode: RobotMode) => request<never>("mode", "POST", { mode }),
     move: (direction: string, speed = 65) =>
       request<never>("motors", "POST", { direction, speed }),
+    setBrushes: (state: CleaningState) =>
+      request<never>("brushes", "POST", { state }),
+    setVacuum: (state: CleaningState) =>
+      request<never>("vacuum", "POST", { state }),
     play: (song: Song) => request<never>("audioplay", "POST", { song: song.name }),
     pause: () => request<never>("audiopause", "POST", {}),
     stopAudio: () => request<never>("audiostop", "POST", {}),

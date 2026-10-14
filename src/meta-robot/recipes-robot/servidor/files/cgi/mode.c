@@ -3,6 +3,7 @@
 #include <string.h>
 #include <cjson/cJSON.h>
 #include "session.h"
+#include "librobot.h"
 
 #define MODE_FILE "/tmp/robot_mode"
 
@@ -76,13 +77,33 @@ int main(void) {
         return 0;
     }
 
+
+    int changing_to_manual = strcmp(mode->valuestring, "manual") == 0;
+    int changing_to_autonomous = strcmp(mode->valuestring, "autonomous") == 0;
+
     int result = write_mode(mode->valuestring);
-    cJSON_Delete(json);
 
     if (result != 0) {
+        cJSON_Delete(json);
         send_error(500, "No se pudo guardar el modo");
         return 0;
     }
+
+    /*
+    * Al entrar en modo manual, todos los actuadores de limpieza
+    * comienzan apagados para mantener un estado conocido y seguro.
+    */
+    if (changing_to_manual) {
+        robot_motor_stop_all();
+        robot_brushes_off();
+        robot_vacuum_off();
+    }
+    else if (changing_to_autonomous) {
+        robot_brushes_on();
+        robot_vacuum_on();
+    }
+
+    cJSON_Delete(json);
 
     printf("Content-Type: application/json\r\n\r\n");
     printf("{\"status\":\"ok\"}");

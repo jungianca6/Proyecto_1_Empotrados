@@ -21,6 +21,8 @@ SRC_URI = " \
     file://cgi/audiostop.c \
     file://cgi/audiovolume.c \
     file://cgi/map.c \
+    file://cgi/brushes.c \
+    file://cgi/vacuum.c \
     file://www/index.html \
     file://www/css/style.css \
     file://www/js/app.js \

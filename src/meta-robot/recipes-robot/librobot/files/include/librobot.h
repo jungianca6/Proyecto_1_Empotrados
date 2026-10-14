@@ -100,6 +100,23 @@ int robot_led_deinit(void);
 
 int robot_led_set(robot_led_t led, int state);
 
+int robot_led_get(robot_led_t led);
+
+
+/* ============================================================
+ * CEPILLOS
+ * ============================================================ */
+
+int robot_brushes_on(void);
+int robot_brushes_off(void);
+
+/* ============================================================
+ * MOTOR DE ASPIRACION
+ * ============================================================ */
+
+int robot_vacuum_on(void);
+int robot_vacuum_off(void);
+
 
 /* ============================================================
  * AUDIO

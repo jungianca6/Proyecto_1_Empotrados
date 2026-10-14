@@ -55,6 +55,8 @@ function App() {
   const [selectedSong, setSelectedSong] = useState<Song>(initialSongs[0]);
   const [volume, setVolume] = useState(65);
   const [playback, setPlayback] = useState("Detenido");
+  const [brushesOn, setBrushesOn] = useState(false);
+  const [vacuumOn, setVacuumOn] = useState(false);
 
   useEffect(() => {
     if (!token || demoMode) return;
@@ -181,6 +183,24 @@ function App() {
     );
   }
 
+  function toggleBrushes() {
+    const nextState = brushesOn ? "off" : "on";
+
+    void sendCommand(
+      () => createRobotApi(serverUrl, token).setBrushes(nextState),
+      () => setBrushesOn(!brushesOn),
+    );
+  }
+
+  function toggleVacuum() {
+    const nextState = vacuumOn ? "off" : "on";
+
+    void sendCommand(
+      () => createRobotApi(serverUrl, token).setVacuum(nextState),
+      () => setVacuumOn(!vacuumOn),
+    );
+  }
+
   if (!token) {
     return (
       <SafeAreaView style={styles.safeArea}>
@@ -267,6 +287,71 @@ function App() {
           </View>
           <View style={styles.motionDivider} />
           <View style={styles.motionAside}><Text style={styles.motionAsideLabel}>MODO ACTIVO</Text><Text style={styles.motionAsideValue}>{isAutonomous ? "Autónomo" : "Manual"}</Text><Text style={styles.motionAsideHint}>{isAutonomous ? "El robot navega por su cuenta." : "Usa las flechas para conducir."}</Text></View>
+        </View>
+
+        <View style={styles.sectionHeadingRow}>
+          <Text style={styles.sectionTitle}>Limpieza</Text>
+          <Text style={styles.sectionMeta}>
+            {isAutonomous ? "CONTROL AUTOMÁTICO" : "CONTROL MANUAL"}
+          </Text>
+        </View>
+
+        <View style={styles.cleaningPanel}>
+          <Pressable
+            disabled={isAutonomous}
+            onPress={toggleVacuum}
+            style={[
+              styles.cleaningButton,
+              vacuumOn && styles.cleaningButtonActive,
+              isAutonomous && styles.disabled,
+            ]}
+          >
+            <Text
+              style={[
+                styles.cleaningLabel,
+                vacuumOn && styles.cleaningLabelActive,
+              ]}
+            >
+              Aspiración
+            </Text>
+
+            <Text
+              style={[
+                styles.cleaningState,
+                vacuumOn && styles.cleaningStateActive,
+              ]}
+            >
+              {vacuumOn ? "ON" : "OFF"}
+            </Text>
+          </Pressable>
+
+          <Pressable
+            disabled={isAutonomous}
+            onPress={toggleBrushes}
+            style={[
+              styles.cleaningButton,
+              brushesOn && styles.cleaningButtonActive,
+              isAutonomous && styles.disabled,
+            ]}
+          >
+            <Text
+              style={[
+                styles.cleaningLabel,
+                brushesOn && styles.cleaningLabelActive,
+              ]}
+            >
+              Cepillos
+            </Text>
+
+            <Text
+              style={[
+                styles.cleaningState,
+                brushesOn && styles.cleaningStateActive,
+              ]}
+            >
+              {brushesOn ? "ON" : "OFF"}
+            </Text>
+          </Pressable>
         </View>
 
         <View style={styles.sectionHeadingRow}><Text style={styles.sectionTitle}>Sensores</Text><Text style={styles.sectionMeta}>PROXIMIDAD</Text></View>
@@ -419,6 +504,49 @@ const styles = StyleSheet.create({
   ledDot: { width: 8, height: 8, borderRadius: 5 }, ledOn: { backgroundColor: colors.green }, ledOff: { backgroundColor: "#D3D9D2" }, ledLabel: { flex: 1, color: colors.ink, fontSize: 10, fontWeight: "600" }, ledState: { color: colors.muted, fontSize: 8, fontWeight: "800" }, ledStateOn: { color: colors.green },
   logoutButton: { height: 43, flexDirection: "row", justifyContent: "center", alignItems: "center", gap: 7, borderWidth: 1, borderColor: colors.line, borderRadius: 5, backgroundColor: colors.white }, logoutText: { color: colors.ink, fontSize: 11, fontWeight: "700" }, logoutArrow: { color: colors.muted, fontSize: 14 },
   footerText: { textAlign: "center", color: colors.muted, fontSize: 8, fontWeight: "700", letterSpacing: 0.9, marginTop: 17 },
+  cleaningPanel: {
+    flexDirection: "row",
+    gap: 10,
+    marginBottom: 21,
+  },
+
+  cleaningButton: {
+    flex: 1,
+    minHeight: 68,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.line,
+    backgroundColor: colors.panel,
+    paddingHorizontal: 14,
+    justifyContent: "center",
+  },
+
+  cleaningButtonActive: {
+    backgroundColor: colors.greenSoft,
+    borderColor: colors.green,
+  },
+
+  cleaningLabel: {
+    color: colors.ink,
+    fontSize: 12,
+    fontWeight: "800",
+  },
+
+  cleaningLabelActive: {
+    color: colors.green,
+  },
+
+  cleaningState: {
+    color: colors.muted,
+    fontSize: 9,
+    fontWeight: "900",
+    marginTop: 5,
+    letterSpacing: 0.6,
+  },
+
+  cleaningStateActive: {
+    color: colors.green,
+  },
 });
 
 export default App;

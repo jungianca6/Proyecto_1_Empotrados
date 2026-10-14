@@ -131,6 +131,7 @@ Es obligatorio exportar las variables de entorno para que el sistema utilice el 
 # Arquitectura del Sistema
 
 ### 1. Diagrama de arquitectura de Software
+<img width="502" height="1280" alt="diagramasoftware" src="https://github.com/user-attachments/assets/2fcaa577-61ed-4f6e-8400-464c9e7926d9" />
 
 ### 2. Diagrama de arquitectura de Hardware
 

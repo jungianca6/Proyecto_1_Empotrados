@@ -1,23 +1,23 @@
 # Proyecto I. Sistema embebido a la medida para un robot aspiradora autónomo con reproducción de audio y control remoto
 
-## 1. Información General
+## Información General
 * **Institución:** Instituto Tecnológico de Costa Rica
 * **Escuela:** Ingeniería en Computadores
 * **Curso:** CE-1113 Sistemas Empotrados
 * **Profesor:** Dr.-Ing. Jeferson González Gómez
-* **Fecha de entrega:** 6 de octubre de 2026
+* **Fecha de entrega:** 15 de octubre de 2026
 * **Equipo:** Giancarlo Vega, Bryan Feng, Allison Redondo, Sebastian Chaves
 
 
-## 2. Descripción del Proyecto
+## Descripción del Proyecto
 Desarrollo de un sistema embebido a medida para un robot aspiradora autónomo basado en la **Raspberry Pi 4**. El proyecto utiliza **Yocto Project** para crear una distribución Linux mínima y personalizada que integra navegación reactiva, reproducción de audio MP3 concurrente y una interfaz de control remoto (Web/App) con visualización de mapa 2D.
 
 
-## 3. Estructura Organizativa (Roles)
+## Estructura Organizativa (Roles)
 Pendiente por determinar de forma concreta
 
 
-## 4. Matriz de Requerimientos
+## Matriz de Requerimientos
 
 | Código | Categoría | Requerimiento | Descripción Detallada |
 | :--- | :--- | :--- | :--- |
@@ -51,15 +51,15 @@ Pendiente por determinar de forma concreta
 | | | | | |
 
 
-## 5. Flujo de Trabajo en Git
+## Flujo de Trabajo en Git
 
-### 5.1. Estrategia de Ramas
+### 1. Estrategia de Ramas
 * `main`: Rama de producción (código estable).
 * `development`: Rama de integración para el trabajo diario.
 * `feat/nombre-tarea`: Desarrollo de nuevas funciones.
 * `fix/nombre-error`: Corrección de fallos.
 
-### 5.2. Convención de Commits (Conventional Commits)
+### 2. Convención de Commits (Conventional Commits)
 Formato: `tipo(alcance): descripción`
 * `feat`: Nueva funcionalidad.
 * `fix`: Corrección de errores.
@@ -72,10 +72,10 @@ Formato: `tipo(alcance): descripción`
 * `perf`: Optimización de rendimiento.
 * `style`: Cambios de estilo/formato sin impacto funcional.
 
-### 5.3. Pull Requests
+### 3. Pull Requests
 * Todo PR debe estar vinculado a un **Issue**.
 
-## 6. Aplicación móvil
+## Aplicación móvil
 
 La app Android/iOS está en [`mobile/`](mobile/README.md) y utiliza React Native con Expo. Para iniciarla en una estación con Node.js LTS:
 
@@ -86,3 +86,62 @@ npm start
 ```
 
 La app ofrece inicio de sesión, control manual/autónomo, lecturas de sensores, mapa 2D, estado de LEDs y controles de audio. Para usarla con el robot, configura la URL del servidor de la Raspberry Pi en la pantalla de acceso. Los endpoints CGI actuales son prototipos y deben integrarse con `librobot` antes de controlar hardware real.
+
+# Guía Técnica y de Compilación
+
+Este documento detalla los procedimientos de configuración, generación de imagen y compilación cruzada para el sistema operativo personalizado del Robot Aspiradora. El sistema está optimizado para arquitecturas **ARM Cortex-A72/A76** (Raspberry Pi 4).
+
+## 1. Generación de la Imagen con Yocto Project 
+
+Para replicar la distribución Linux completa, siga los pasos de configuración del entorno de BitBake.
+
+### 1.1. Configuración de Capas
+
+Asegúrese de incluir la capa personalizada del proyecto en su entorno de construcción:
+
+``` bash
+# Pendiente
+```
+
+### 1.2. Construcción de la Imagen y el SDK
+
+Para generar la imagen mínima y el SDK de desarrollo (necesario para la compilación cruzada):
+
+```bash
+# Pendiente
+```
+
+## 2. Guía de Compilación Cruzada (Cross-Compilation)
+
+Este procedimiento permite generar los binarios de la aplicación y la biblioteca dinámica utilizando el Toolchain de Yocto.
+
+### 2.1. Preparar el Entorno (Environment Setup)
+
+Es obligatorio exportar las variables de entorno para que el sistema utilice el compilador cruzado en lugar del nativo:
+
+```bash
+# Pendiente
+```
+
+### 2.2. Construcción del Proyecto 
+```bash
+# Pendiente
+```
+
+# Arquitectura del Sistema
+
+### 1. Diagrama de arquitectura de Software
+
+### 2. Diagrama de arquitectura de Hardware
+
+# Documentación de la API
+### Pendiente
+
+# Evidencias de compilación cruzada automática
+### Pendiente
+
+# Reporte de métricas
+### Pendiente
+
+# Resultados
+### Pendiente 

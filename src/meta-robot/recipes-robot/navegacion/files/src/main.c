@@ -9,6 +9,7 @@
 #include "leds.h"
 #include "brushes.h"
 #include "vacuum.h"
+#include "nav_events.h"
 
 #define MODE_FILE "/tmp/robot_mode"
 
@@ -77,6 +78,9 @@ int main(void)
 
     fsm_init();
 
+    /* Log de eventos + mapa. Si falla, la navegación sigue sin mapa. */
+    nav_events_init(NULL, NULL, NULL);
+
     sleep(3);
 
     brushes_on();
@@ -129,10 +133,14 @@ int main(void)
             fsm_update(EVENT_NONE);
         }
 
+        nav_events_tick();
+
         usleep(10000);
     }
 
     fsm_update(EVENT_STOP);
+    nav_events_tick();
+    nav_events_close();
 
     brushes_off();
     vacuum_off();

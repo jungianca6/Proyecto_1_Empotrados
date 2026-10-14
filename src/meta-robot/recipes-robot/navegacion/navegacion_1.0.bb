@@ -1,3 +1,4 @@
+
 SUMMARY = "Aplicacion principal de navegacion del robot"
 LICENSE = "MIT"
 
@@ -9,6 +10,11 @@ RDEPENDS:${PN} = "librobot"
 SRC_URI = " \
     file://CMakeLists.txt \
     file://src/main.c \
+    file://src/mapper.c \
+    file://src/mapper.h \
+    file://src/nav_events.c \
+    file://src/nav_events.h \
+    file://robot_map.conf \
     file://app_robot.init \
 "
 
@@ -21,6 +27,10 @@ do_install:append() {
     install -d ${D}${sysconfdir}/init.d
     install -m 0755 ${WORKDIR}/app_robot.init \
         ${D}${sysconfdir}/init.d/app_robot
+
+    # Parametros de calibracion del mapa
+    install -m 0644 ${WORKDIR}/robot_map.conf \
+        ${D}${sysconfdir}/robot_map.conf
 
     # Crear enlaces para arranque automatico
     install -d ${D}${sysconfdir}/rc3.d
@@ -35,6 +45,7 @@ do_install:append() {
 
 FILES:${PN} += " \
     ${sysconfdir}/init.d/app_robot \
+    ${sysconfdir}/robot_map.conf \
     ${sysconfdir}/rc3.d/S90app_robot \
     ${sysconfdir}/rc5.d/S90app_robot \
 "

@@ -15,6 +15,11 @@ void led_autonomous_set(int on);
 void led_manual_set(int on);
 void led_obstacle_set(int on);
 
+int led_system_get(void);
+int led_autonomous_get(void);
+int led_manual_get(void);
+int led_obstacle_get(void);
+
 void leds_cleanup(void);
 
 #endif // LEDS_H

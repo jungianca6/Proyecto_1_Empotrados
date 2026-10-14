@@ -123,11 +123,23 @@ int main(void)
         }
 
         /*
-         * Solo ejecutar la FSM en modo autónomo.
-         */
-        if (!manual_mode) {
-            fsm_update(EVENT_NONE);
+    * En modo autónomo, la FSM controla el LED de obstáculo.
+    * En modo manual, el LED refleja directamente los sensores.
+    */
+    if (!manual_mode) {
+        fsm_update(EVENT_NONE);
+    }
+    else {
+        int front_obstacle = sensor_obstacle_detected();
+        int side_obstacle = sensor_side_obstacle_detected();
+
+        if (front_obstacle == 1 || side_obstacle == 1) {
+            led_obstacle_set(1);
         }
+        else {
+            led_obstacle_set(0);
+        }
+    }
 
         usleep(10000);
     }

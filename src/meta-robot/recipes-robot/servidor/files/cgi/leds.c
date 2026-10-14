@@ -78,6 +78,24 @@ int main(void)
     if (method &&
         strcmp(method, "GET") == 0) {
 
+        int system = robot_led_get(LED_POWER);
+        int autonomous = robot_led_get(LED_AUTO);
+        int manual = robot_led_get(LED_MANUAL);
+        int obstacle = robot_led_get(LED_OBSTACLE);
+
+        if (system < 0 ||
+            autonomous < 0 ||
+            manual < 0 ||
+            obstacle < 0) {
+
+            send_error(
+                500,
+                "No se pudo leer el estado de los LEDs"
+            );
+
+            return 0;
+        }
+
         printf("Content-Type: application/json\r\n");
         printf("\r\n");
 
@@ -85,10 +103,16 @@ int main(void)
             "{"
             "\"status\":\"ok\","
             "\"data\":{"
-                "\"implemented\":false,"
-                "\"message\":\"Modulo de LEDs pendiente\""
+                "\"system\":%s,"
+                "\"autonomous\":%s,"
+                "\"manual\":%s,"
+                "\"obstacle\":%s"
             "}"
-            "}"
+            "}",
+            system ? "true" : "false",
+            autonomous ? "true" : "false",
+            manual ? "true" : "false",
+            obstacle ? "true" : "false"
         );
 
         return 0;

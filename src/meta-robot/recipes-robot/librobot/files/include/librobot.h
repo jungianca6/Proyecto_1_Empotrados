@@ -100,6 +100,8 @@ int robot_led_deinit(void);
 
 int robot_led_set(robot_led_t led, int state);
 
+int robot_led_get(robot_led_t led);
+
 
 /* ============================================================
  * CEPILLOS

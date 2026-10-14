@@ -72,6 +72,44 @@ static void gpio_set(int raw_pin, int value)
     sysfs_write(path, value ? "1" : "0");
 }
 
+static int gpio_get(int raw_pin)
+{
+    int pin = get_gpio_pin(raw_pin);
+    char path[64];
+    char value;
+
+    snprintf(
+        path,
+        sizeof(path),
+        "/sys/class/gpio/gpio%d/value",
+        pin
+    );
+
+    int fd = open(path, O_RDONLY);
+
+    if (fd < 0) {
+        return -1;
+    }
+
+    ssize_t bytes = read(fd, &value, 1);
+    close(fd);
+
+    if (bytes != 1) {
+        return -1;
+    }
+
+    if (value == '1') {
+        return 1;
+    }
+
+    if (value == '0') {
+        return 0;
+    }
+
+    return -1;
+}
+
+
 int leds_init(void)
 {
     int gpios[] = {
@@ -110,6 +148,25 @@ void led_obstacle_set(int on)
     gpio_set(GPIO_LED_OBSTACLE, on);
 }
 
+int led_system_get(void)
+{
+    return gpio_get(GPIO_LED_SYSTEM);
+}
+
+int led_autonomous_get(void)
+{
+    return gpio_get(GPIO_LED_AUTONOMOUS);
+}
+
+int led_manual_get(void)
+{
+    return gpio_get(GPIO_LED_MANUAL);
+}
+
+int led_obstacle_get(void)
+{
+    return gpio_get(GPIO_LED_OBSTACLE);
+}
 void leds_cleanup(void)
 {
     int gpios[] = {

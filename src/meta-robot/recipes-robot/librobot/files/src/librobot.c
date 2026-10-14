@@ -1,6 +1,7 @@
 #include "librobot.h"
 #include "brushes.h"
 #include "vacuum.h"
+#include "leds.h"
 
 /* ============================================================
  * MOTORES
@@ -77,26 +78,63 @@ int robot_sensor_side_obstacle(void)
 /* ============================================================
  * LEDs
  * ============================================================
- *
- * Todavía no implementados.
  */
 
 int robot_led_init(void)
 {
-    return -1;
+    return leds_init();
 }
 
 int robot_led_deinit(void)
 {
+    leds_cleanup();
     return 0;
 }
 
 int robot_led_set(robot_led_t led, int state)
 {
-    (void)led;
-    (void)state;
+    switch (led) {
+        case LED_AUTO:
+            led_autonomous_set(state);
+            break;
 
-    return -1;
+        case LED_MANUAL:
+            led_manual_set(state);
+            break;
+
+        case LED_OBSTACLE:
+            led_obstacle_set(state);
+            break;
+
+        case LED_POWER:
+            led_system_set(state);
+            break;
+
+        default:
+            return -1;
+    }
+
+    return 0;
+}
+
+int robot_led_get(robot_led_t led)
+{
+    switch (led) {
+        case LED_AUTO:
+            return led_autonomous_get();
+
+        case LED_MANUAL:
+            return led_manual_get();
+
+        case LED_OBSTACLE:
+            return led_obstacle_get();
+
+        case LED_POWER:
+            return led_system_get();
+
+        default:
+            return -1;
+    }
 }
 
 

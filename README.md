@@ -371,4 +371,17 @@ Las métricas recopiladas por la aplicación permiten evaluar el tamaño del sis
 | Uso de CPU | 0.15 | % | Informativo |
 
 # Resultados
+
+alissonrm@alissonrm-Vivobook-ASUSLaptop-X1504ZA-X1504ZA:~/poky-scarthgap-5.0.15/build$ ls -lt ~/poky-scarthgap-5.0.15/build/tmp/deploy/images/raspberrypi4-64/*wic* | head
+lrwxrwxrwx 1 alissonrm alissonrm        64 Oct 15 01:52 /home/alissonrm/poky-scarthgap-5.0.15/build/tmp/deploy/images/raspberrypi4-64/core-image-minimal-raspberrypi4-64.rootfs.wic.bz2 -> core-image-minimal-raspberrypi4-64.rootfs-20261015075056.wic.bz2
+lrwxrwxrwx 1 alissonrm alissonrm        65 Oct 15 01:52 /home/alissonrm/poky-scarthgap-5.0.15/build/tmp/deploy/images/raspberrypi4-64/core-image-minimal-raspberrypi4-64.rootfs.wic.bmap -> core-image-minimal-raspberrypi4-64.rootfs-20261015075056.wic.bmap
+-rw-r--r-- 1 alissonrm alissonrm      3812 Oct 15 01:52 /home/alissonrm/poky-scarthgap-5.0.15/build/tmp/deploy/images/raspberrypi4-64/core-image-minimal-raspberrypi4-64.rootfs-20261015075056.wic.bmap
+-rw-r--r-- 1 alissonrm alissonrm  72052510 Oct 15 01:52 /home/alissonrm/poky-scarthgap-5.0.15/build/tmp/deploy/images/raspberrypi4-64/core-image-minimal-raspberrypi4-64.rootfs-20261015075056.wic.bz2
+-rw-r--r-- 1 alissonrm alissonrm 382520320 Oct 15 00:54 /home/alissonrm/poky-scarthgap-5.0.15/build/tmp/deploy/images/raspberrypi4-64/core-image-minimal-raspberrypi4-64.rootfs-20261015065312.wic
+-rw-r--r-- 1 alissonrm alissonrm 393424896 Oct 14 14:42 /home/alissonrm/poky-scarthgap-5.0.15/build/tmp/deploy/images/raspberrypi4-64/core-image-minimal-raspberrypi4-64.rootfs-20261014204032.wic
+-rw-r--r-- 1 alissonrm alissonrm 393424896 Oct 14 13:44 /home/alissonrm/poky-scarthgap-5.0.15/build/tmp/deploy/images/raspberrypi4-64/core-image-minimal-raspberrypi4-64.rootfs-20261014194224.wic
+-rw-r--r-- 1 alissonrm alissonrm 393424896 Oct 14 11:58 /home/alissonrm/poky-scarthgap-5.0.15/build/tmp/deploy/images/raspberrypi4-64/core-image-minimal-raspberrypi4-64.rootfs-20261014175707.wic
+-rw-r--r-- 1 alissonrm alissonrm 393424896 Oct 14 10:51 /home/alissonrm/poky-scarthgap-5.0.15/build/tmp/deploy/images/raspberrypi4-64/core-image-minimal-raspberrypi4-64.rootfs-20261014164832.wic
+-rw-r--r-- 1 alissonrm alissonrm 393424896 Oct 14 10:27 /home/alissonrm/poky-scarthgap-5.0.15/build/tmp/deploy/images/raspberrypi4-64/core-image-minimal-raspberrypi4-64.rootfs-20261014162447.wic
+alissonrm@alissonrm-Vivobook-ASUSLaptop-X1504ZA-X1504ZA:~/poky-scarthgap-5.0.15/build$ 
 ### Pendiente 

@@ -125,9 +125,22 @@ Es obligatorio exportar las variables de entorno para que el sistema utilice el 
 
 ### 2.2. Construcción del Proyecto 
 ```bash
-# Pendiente
-```
-
+cd ~/poky-scarthgap-5.0.15
+source oe-init-build-env
+bitbake core-image-minimal
+ls -lt ~/poky-scarthgap-5.0.15/build/tmp/deploy/images/raspberrypi4-64/*wic* | head
+lsblk
+cd ~/poky-scarthgap-5.0.15/build/tmp/deploy/images/raspberrypi4-64
+bunzip2 -k core-image-minimal-raspberrypi4-64.rootfs-20261015075056.wic.bz2
+sudo umount /dev/sda1 2>/dev/null || true
+sudo umount /dev/sda2 2>/dev/null || true
+sudo dd if=core-image-minimal-raspberrypi4-64.rootfs-20261015075056.wic \
+  of=/dev/sda \
+  bs=4M \
+  status=progress \
+  conv=fsync
+sync
+sudo partprobe /dev/sda
 # Arquitectura del Sistema
 
 ### 1. Diagrama de arquitectura de Software

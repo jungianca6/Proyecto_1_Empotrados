@@ -264,6 +264,7 @@ sudo partprobe /dev/sda
 <img width="502" height="1280" alt="diagramasoftware" src="https://github.com/user-attachments/assets/2fcaa577-61ed-4f6e-8400-464c9e7926d9" />
 
 ### 2. Diagrama de arquitectura de Hardware
+<img width="1536" height="794" alt="arquitectura" src="https://github.com/user-attachments/assets/efb8c158-c8db-4527-804e-3d616ee69fac" />
 
 # Documentación de la API
 ### Pendiente

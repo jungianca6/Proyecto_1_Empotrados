@@ -177,8 +177,15 @@ function App() {
       server_active: true,
       wifi_active: true,
       navigation_active: true,
+
       navigation_ready_seconds: 11.39,
+
       navigation_rss_kb: 2844,
+      server_rss_kb: 1736,
+
+      stabilization_seconds: 10,
+      cpu_sample_seconds: 5,
+      measurement_finished_seconds: 26.47,
     });
   }
 
@@ -412,6 +419,44 @@ function App() {
                   </Text>
                 </View>
               </View>
+
+              <View style={styles.metricDivider} />
+
+                <View style={styles.metricItem}>
+                  <View>
+                    <Text style={styles.metricLabel}>
+                      MEMORIA RAM
+                    </Text>
+
+                    <Text style={styles.metricValue}>
+                      {metrics.ram_used_mb.toFixed(2)} MB
+                    </Text>
+
+                    <Text style={styles.metricLimit}>
+                      Disponible: {metrics.ram_available_mb.toFixed(2)} MB
+                    </Text>
+                  </View>
+                </View>
+
+                <View style={styles.metricDivider} />
+
+                <View style={styles.metricItem}>
+                  <View>
+                    <Text style={styles.metricLabel}>
+                      USO DE CPU
+                    </Text>
+
+                    <Text style={styles.metricValue}>
+                      {metrics.cpu_percent.toFixed(2)} %
+                    </Text>
+
+                    <Text style={styles.metricLimit}>
+                      Promedio durante {metrics.cpu_sample_seconds} s
+                    </Text>
+                  </View>
+                </View>
+
+
             </>
           ) : (
             <Text style={styles.metricsUnavailable}>

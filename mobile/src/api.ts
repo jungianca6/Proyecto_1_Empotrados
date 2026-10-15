@@ -53,8 +53,15 @@ export type SystemMetrics = {
   server_active: boolean;
   wifi_active: boolean;
   navigation_active: boolean;
+
   navigation_ready_seconds: number | null;
+
   navigation_rss_kb: number | null;
+  server_rss_kb: number | null;
+
+  stabilization_seconds: number;
+  cpu_sample_seconds: number;
+  measurement_finished_seconds: number;
 };
 
 type ApiResult<T> = {

@@ -4,16 +4,25 @@ OUTPUT_DIR="/var/lib/robot"
 OUTPUT_FILE="${OUTPUT_DIR}/metrics.json"
 TEMP_FILE="${OUTPUT_DIR}/metrics.json.tmp"
 
+STABILIZATION_SECONDS=10
+CPU_SAMPLE_SECONDS=5
+NAVIGATION_WAIT_SECONDS=30
+
 mkdir -p "$OUTPUT_DIR"
 
 # ============================================================
-# 1. TIEMPO DE ARRANQUE
+# 1. METRICAS DE ARRANQUE
 # ============================================================
 
-# /proc/uptime contiene los segundos transcurridos desde el boot.
+#
+# Este servicio arranca despues de robot-server.service
+# y robot-wifi.service.
+#
+# Por eso /proc/uptime en este punto representa aproximadamente
+# el tiempo necesario para tener disponible el sistema de control.
+#
 BOOT_SECONDS=$(awk '{printf "%.2f", $1}' /proc/uptime)
 
-# Estado de los servicios importantes.
 if systemctl is-active --quiet robot-server.service; then
     SERVER_ACTIVE=true
 else
@@ -28,34 +37,14 @@ fi
 
 
 # ============================================================
-# 2. NAVEGACION
+# 2. ROOTFS
 # ============================================================
 
-NAVIGATION_ACTIVE=false
-NAVIGATION_SECONDS="null"
-
-# La navegacion se inicia mediante /etc/init.d/app_robot.
-# Esperamos un maximo de 30 segundos por si arranca unos instantes
-# despues de este servicio.
-i=0
-
-while [ "$i" -lt 30 ]; do
-    if pidof app_robot >/dev/null 2>&1; then
-        NAVIGATION_ACTIVE=true
-        NAVIGATION_SECONDS=$(awk '{printf "%.2f", $1}' /proc/uptime)
-        break
-    fi
-
-    sleep 1
-    i=$((i + 1))
-done
-
-
-# ============================================================
-# 3. ROOTFS
-# ============================================================
-
-# df -kP entrega valores en KiB y un formato facil de procesar.
+#
+# Medicion del filesystem raiz ya desplegado.
+#
+# df -kP utiliza KiB y un formato estable para scripts.
+#
 ROOTFS_TOTAL_KB=$(df -kP / | awk 'NR == 2 {print $2}')
 ROOTFS_USED_KB=$(df -kP / | awk 'NR == 2 {print $3}')
 ROOTFS_AVAILABLE_KB=$(df -kP / | awk 'NR == 2 {print $4}')
@@ -74,7 +63,46 @@ ROOTFS_AVAILABLE_MB=$(awk \
 
 
 # ============================================================
-# 4. RAM
+# 3. ESPERAR NAVEGACION
+# ============================================================
+
+NAVIGATION_ACTIVE=false
+NAVIGATION_READY_SECONDS="null"
+
+i=0
+
+while [ "$i" -lt "$NAVIGATION_WAIT_SECONDS" ]; do
+
+    if pidof app_robot >/dev/null 2>&1; then
+        NAVIGATION_ACTIVE=true
+
+        NAVIGATION_READY_SECONDS=$(
+            awk '{printf "%.2f", $1}' /proc/uptime
+        )
+
+        break
+    fi
+
+    sleep 1
+    i=$((i + 1))
+done
+
+
+# ============================================================
+# 4. ESTABILIZACION DE OPERACION NORMAL
+# ============================================================
+
+#
+# Una vez que la navegacion esta activa esperamos unos segundos
+# para evitar medir solamente el pico inicial de arranque.
+#
+if [ "$NAVIGATION_ACTIVE" = true ]; then
+    sleep "$STABILIZATION_SECONDS"
+fi
+
+
+# ============================================================
+# 5. RAM DURANTE OPERACION NORMAL
 # ============================================================
 
 MEM_TOTAL_KB=$(awk '/^MemTotal:/ {print $2}' /proc/meminfo)
@@ -96,7 +124,51 @@ MEM_AVAILABLE_MB=$(awk \
 
 
 # ============================================================
-# 5. CPU
+# 6. MEMORIA DE NAVEGACION
+# ============================================================
+
+NAVIGATION_RSS_KB="null"
+
+NAV_PID=$(pidof app_robot 2>/dev/null | awk '{print $1}')
+
+if [ -n "$NAV_PID" ] &&
+   [ -r "/proc/$NAV_PID/status" ]; then
+
+    NAV_RSS=$(
+        awk '/^VmRSS:/ {print $2}' \
+        "/proc/$NAV_PID/status"
+    )
+
+    if [ -n "$NAV_RSS" ]; then
+        NAVIGATION_RSS_KB="$NAV_RSS"
+    fi
+fi
+
+
+# ============================================================
+# 7. MEMORIA DE UHTTPD
+# ============================================================
+
+SERVER_RSS_KB="null"
+
+SERVER_PID=$(pidof uhttpd 2>/dev/null | awk '{print $1}')
+
+if [ -n "$SERVER_PID" ] &&
+   [ -r "/proc/$SERVER_PID/status" ]; then
+
+    SERVER_RSS=$(
+        awk '/^VmRSS:/ {print $2}' \
+        "/proc/$SERVER_PID/status"
+    )
+
+    if [ -n "$SERVER_RSS" ]; then
+        SERVER_RSS_KB="$SERVER_RSS"
+    fi
+fi
+
+
+# ============================================================
+# 8. CPU DURANTE OPERACION NORMAL
 # ============================================================
 
 read_cpu()
@@ -126,14 +198,22 @@ read_cpu()
     ))
 }
 
+#
+# Primera muestra.
+#
 read_cpu
 
 CPU_TOTAL_1=$CPU_TOTAL
 CPU_IDLE_1=$CPU_IDLE
 
-# Ventana de medicion de CPU.
-sleep 2
+#
+# Ventana de muestreo.
+#
+sleep "$CPU_SAMPLE_SECONDS"
 
+#
+# Segunda muestra.
+#
 read_cpu
 
 CPU_TOTAL_2=$CPU_TOTAL
@@ -143,36 +223,31 @@ DELTA_TOTAL=$((CPU_TOTAL_2 - CPU_TOTAL_1))
 DELTA_IDLE=$((CPU_IDLE_2 - CPU_IDLE_1))
 
 if [ "$DELTA_TOTAL" -gt 0 ]; then
+
     CPU_PERCENT=$(awk \
         -v total="$DELTA_TOTAL" \
         -v idle="$DELTA_IDLE" \
         'BEGIN {
-            printf "%.2f", 100 * (total - idle) / total
+            printf "%.2f",
+                100 * (total - idle) / total
         }')
+
 else
     CPU_PERCENT="0.00"
 fi
 
 
 # ============================================================
-# 6. ESTADO DEL PROCESO DE NAVEGACION
+# 9. MOMENTO EN QUE TERMINO LA MEDICION
 # ============================================================
 
-NAVIGATION_RSS_KB="null"
-
-NAV_PID=$(pidof app_robot 2>/dev/null | awk '{print $1}')
-
-if [ -n "$NAV_PID" ] && [ -r "/proc/$NAV_PID/status" ]; then
-    NAV_RSS=$(awk '/^VmRSS:/ {print $2}' "/proc/$NAV_PID/status")
-
-    if [ -n "$NAV_RSS" ]; then
-        NAVIGATION_RSS_KB="$NAV_RSS"
-    fi
-fi
+MEASUREMENT_SECONDS=$(
+    awk '{printf "%.2f", $1}' /proc/uptime
+)
 
 
 # ============================================================
-# 7. GENERAR JSON
+# 10. GENERAR JSON
 # ============================================================
 
 cat > "$TEMP_FILE" <<EOF
@@ -194,12 +269,19 @@ cat > "$TEMP_FILE" <<EOF
     "server_active": ${SERVER_ACTIVE},
     "wifi_active": ${WIFI_ACTIVE},
     "navigation_active": ${NAVIGATION_ACTIVE},
-    "navigation_ready_seconds": ${NAVIGATION_SECONDS},
-    "navigation_rss_kb": ${NAVIGATION_RSS_KB}
+
+    "navigation_ready_seconds": ${NAVIGATION_READY_SECONDS},
+
+    "navigation_rss_kb": ${NAVIGATION_RSS_KB},
+    "server_rss_kb": ${SERVER_RSS_KB},
+
+    "stabilization_seconds": ${STABILIZATION_SECONDS},
+    "cpu_sample_seconds": ${CPU_SAMPLE_SECONDS},
+
+    "measurement_finished_seconds": ${MEASUREMENT_SECONDS}
 }
 EOF
 
-# Reemplazo atomico para que el CGI nunca lea un archivo incompleto.
 mv "$TEMP_FILE" "$OUTPUT_FILE"
 
 chmod 0644 "$OUTPUT_FILE"

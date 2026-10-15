@@ -141,6 +141,8 @@ sudo dd if=core-image-minimal-raspberrypi4-64.rootfs-20261015075056.wic \
   conv=fsync
 sync
 sudo partprobe /dev/sda
+```
+
 # Arquitectura del Sistema
 
 ### 1. Diagrama de arquitectura de Software
@@ -155,7 +157,218 @@ sudo partprobe /dev/sda
 ### Pendiente
 
 # Reporte de métricas
-### Pendiente
+
+## Objetivo
+
+Con el propósito de evaluar la eficiencia de los recursos de la imagen Linux
+desarrollada para la Raspberry Pi 4, se implementó un mecanismo de recolección
+automática de métricas durante el arranque del sistema.
+
+El recolector registra información sobre el espacio utilizado por el sistema
+de archivos raíz (rootfs), el tiempo transcurrido desde el arranque del kernel,
+el consumo de memoria RAM y el porcentaje de utilización de CPU. 
+
+La implementación utiliza un script de shell que obtiene los datos directamente
+de las interfaces de Linux, principalmente `/proc` y las herramientas `df` y
+`systemctl`. Los resultados se almacenan en un archivo JSON para facilitar su
+consulta y su posible integración con el servidor web del robot.
+
+## Herramientas utilizadas
+
+| Herramienta o interfaz | Propósito |
+| --- | --- |
+| `/proc/uptime` | Obtener el tiempo transcurrido desde el arranque del kernel. |
+| `df -kP /` | Consultar el tamaño, el espacio utilizado y el espacio disponible del sistema de archivos raíz. |
+| `/proc/meminfo` | Obtener información sobre la memoria RAM total y disponible. |
+| `/proc/stat` | Obtener los contadores de tiempo de CPU necesarios para calcular su utilización. |
+| `/proc/<PID>/status` | Consultar la memoria residente de procesos específicos. |
+| `pidof` | Comprobar la presencia de los procesos de navegación y del servidor web. |
+| `systemctl` | Consultar el estado de los servicios del robot. |
+| `awk` | Procesar los datos y convertir las unidades cuando corresponde. |
+| `sleep` | Establecer los intervalos de estabilización y muestreo. |
+
+Estas herramientas permiten obtener las métricas mediante interfaces estándar
+de Linux, sin depender de aplicaciones gráficas adicionales.
+
+## Automatización de la recolección
+
+La recolección se implementa mediante el script `robot-metrics-collect`,
+instalado en `/usr/sbin/robot-metrics-collect`, y el servicio
+`robot-metrics.service`.
+
+El servicio se configura como una unidad de tipo `oneshot` de systemd y se
+habilita para ejecutarse durante el arranque. Su configuración establece
+dependencias respecto a `robot-server.service` y `robot-wifi.service`.
+
+Durante la ejecución, el recolector realiza las siguientes operaciones:
+
+1. Crea el directorio destinado a almacenar los resultados.
+2. Obtiene el tiempo transcurrido desde el arranque del kernel y consulta el
+   estado de los servicios del servidor web y de la conexión Wi-Fi.
+3. Consulta el espacio total, utilizado y disponible del sistema de archivos
+   raíz.
+4. Espera hasta 30 segundos para detectar el proceso `app_robot`, utilizado
+   como indicador de que la navegación está activa.
+5. Si detecta la navegación, espera 10 segundos adicionales para reducir la
+   influencia del pico inicial de actividad.
+6. Registra el consumo de memoria RAM del sistema y la memoria residente de
+   los procesos de navegación y del servidor web, cuando están disponibles.
+7. Calcula el porcentaje de utilización de CPU durante una ventana de
+   muestreo de 5 segundos.
+8. Genera el archivo JSON con los resultados y lo publica en la ubicación
+   configurada.
+
+El archivo se escribe inicialmente con el nombre temporal `metrics.json.tmp`
+y posteriormente se renombra a `metrics.json`. Esto evita que un lector
+encuentre el archivo definitivo mientras todavía se está escribiendo.
+
+La ubicación del reporte es:
+
+`/var/lib/robot/metrics.json`
+
+## Métricas recopiladas
+
+### 1. Tamaño del sistema de archivos raíz (rootfs)
+
+El script utiliza el comando `df -kP /` para consultar la capacidad del sistema
+de archivos que contiene la raíz `/`.
+
+Los resultados se expresan en MiB, calculados a partir de los valores
+reportados en KiB.
+
+Se registran los siguientes valores:
+
+- `rootfs_total_mb`: capacidad total del sistema de archivos raíz.
+- `rootfs_used_mb`: espacio utilizado.
+- `rootfs_available_mb`: espacio disponible.
+- `rootfs_limit_mb`: presupuesto de referencia de 200 MB.
+
+Esta medición describe el sistema de archivos raíz en el dispositivo después
+del despliegue. No representa necesariamente el tamaño del archivo de imagen
+generado por Yocto, ya que ambos valores dependen de aspectos diferentes del
+proceso de construcción y del almacenamiento.
+
+Para evaluar el cumplimiento del presupuesto, se debe indicar explícitamente
+qué valor se está comparando con el límite de referencia y documentar el
+método de medición utilizado.
+
+### 2. Tiempo de arranque
+
+El script consulta `/proc/uptime` para obtener el tiempo transcurrido desde el
+arranque del kernel.
+
+El valor `boot_seconds` corresponde al tiempo registrado cuando se ejecuta
+el recolector. También se incluye `navigation_ready_seconds`, que registra
+el tiempo transcurrido desde el arranque del kernel hasta que el script detecta
+el proceso `app_robot`.
+
+El presupuesto de referencia establecido por el proyecto es de 15 segundos.
+
+Es importante señalar que estas mediciones no identifican directamente el
+instante en que el servicio de control queda operativo. El tiempo de
+`navigation_ready_seconds` depende de la detección del proceso de navegación,
+mientras que la disponibilidad real del control también depende de que el
+servidor web pueda recibir y procesar solicitudes.
+
+Por ello, para verificar rigurosamente el requisito del proyecto, debe medirse
+el tiempo desde el reset hasta una señal verificable de disponibilidad del
+servicio de control, por ejemplo, una petición HTTP de prueba que reciba una
+respuesta satisfactoria.
+
+### 3. Uso de memoria RAM
+
+La información de memoria se obtiene de `/proc/meminfo`.
+
+El script utiliza `MemTotal` para determinar la memoria total reconocida por
+el sistema y `MemAvailable` para estimar la memoria que puede utilizarse sin
+recurrir excesivamente a intercambio de memoria.
+
+La memoria utilizada se calcula como:
+
+`RAM utilizada = MemTotal - MemAvailable`
+
+Se registran los siguientes campos:
+
+- `ram_total_mb`: memoria RAM total reconocida por Linux.
+- `ram_available_mb`: memoria estimada como disponible.
+- `ram_used_mb`: memoria calculada como total menos disponible.
+
+Además, el recolector consulta el campo `VmRSS` de `/proc/<PID>/status` para
+obtener la memoria residente de los siguientes procesos, cuando existen:
+
+- `navigation_rss_kb`: memoria residente del proceso `app_robot`.
+- `server_rss_kb`: memoria residente del proceso `uhttpd`.
+
+La memoria residente representa la memoria física actualmente asociada a un
+proceso. No debe interpretarse como una medida independiente del consumo total
+del sistema, ya que la suma de la memoria residente de varios procesos puede
+incluir páginas compartidas.
+
+### 4. Uso de CPU
+
+La utilización de CPU se calcula a partir de los contadores globales de
+`/proc/stat`.
+
+El recolector obtiene una primera muestra de los contadores, espera cinco
+segundos y obtiene una segunda muestra. A partir de las diferencias entre
+ambas muestras, calcula el porcentaje de tiempo que la CPU no estuvo inactiva.
+
+La fórmula utilizada es:
+
+`CPU (%) = 100 × (Δtiempo_total - Δtiempo_inactivo) / Δtiempo_total`
+
+El cálculo considera como inactivo el tiempo reportado en los campos `idle`
+e `iowait`.
+
+El resultado se registra en `cpu_percent`.
+
+Esta medición corresponde a la utilización global de la CPU durante el
+intervalo de muestreo. No representa exclusivamente el consumo de la
+navegación, del servidor web o del sistema de audio.
+
+Para que la medición sea representativa de la operación normal, el robot debe
+estar ejecutando simultáneamente la navegación autónoma, la reproducción de
+audio y el servidor web. También debe documentarse si la medición se realizó
+mientras el robot estaba moviéndose, evitando obstáculos y atendiendo
+solicitudes desde un cliente.
+
+### 5. Estado de los servicios
+
+El reporte incluye indicadores para facilitar la interpretación de las
+mediciones:
+
+- `server_active`: indica si `robot-server.service` se encuentra activo
+  cuando se consulta su estado.
+- `wifi_active`: indica si `robot-wifi.service` se encuentra activo.
+- `navigation_active`: indica si se detectó el proceso `app_robot`.
+
+Estos indicadores ayudan a identificar si la medición se realizó con los
+componentes principales presentes. Sin embargo, un servicio activo o un
+proceso existente no garantizan por sí solos que toda su funcionalidad esté
+operativa.
+
+## Archivo de resultados
+
+Los resultados se almacenan en formato JSON en:
+
+`/var/lib/robot/metrics.json`
+
+El archivo contiene los campos descritos anteriormente, junto con los límites
+de referencia y los intervalos de muestreo utilizados.
+
+Debido a que no se pueden realizar consultas por SSH a la Raspberry Pi 4, ni se tiene un cable micro HDMI para conectarlo a un monitor para ejecutar comandos directamente a la Raspberry, se envían los datos relevantes a la aplicación móvil, por medio de un CGI en `src/meta-robot/recipes-robot/servidor/files/cgi/metrics.c`. Se envía el tamaño de rootfs, el tiempo de arranque, y valores estáticos generales del uso de CPU y la memoria RAM.
+
+## Resultados de las métricas
+
+Las métricas recopiladas por la aplicación permiten evaluar el tamaño del sistema de archivos raíz, el tiempo de arranque y el consumo general de memoria RAM y CPU.
+
+| Métrica | Valor obtenido | Unidad | Presupuesto de referencia |
+|---|---:|---|---|
+| Tamaño total del rootfs | 108.19 | MB | ≤ 200 MB |
+| Tiempo de arranque | 15.23 | s | ≤ 15 s |
+| Memoria RAM utilizada | 108.41 | MB | Informativo |
+| Memoria RAM disponible | 1736.89 | MB | Informativo |
+| Uso de CPU | 0.15 | % | Informativo |
 
 # Resultados
 ### Pendiente 

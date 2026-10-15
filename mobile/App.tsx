@@ -19,7 +19,10 @@ import {
   RobotStatus,
   SensorData,
   Song,
+  SystemMetrics,
 } from "./src/api";
+
+
 
 const initialMap: RobotMap = {
   width: 5,
@@ -36,6 +39,8 @@ const initialSongs: Song[] = [
   { id: 1, name: "test.mp3" },
   { id: 2, name: "song2.mp3" },
 ];
+
+
 
 function App() {
   const [serverUrl, setServerUrl] = useState("http://192.168.1.100");
@@ -57,6 +62,9 @@ function App() {
   const [playback, setPlayback] = useState("Detenido");
   const [brushesOn, setBrushesOn] = useState(false);
   const [vacuumOn, setVacuumOn] = useState(false);
+  const [metrics, setMetrics] = useState<SystemMetrics | null>(null);
+
+  
 
   useEffect(() => {
     if (!token || demoMode) return;
@@ -102,6 +110,26 @@ function App() {
     return () => clearInterval(interval);
   }, [demoMode, serverUrl, token]);
 
+  useEffect(() => {
+    if (!token || demoMode) return;
+
+    const api = createRobotApi(serverUrl, token);
+
+    async function loadMetrics() {
+      try {
+        const result = await api.metrics();
+
+        if (result.data) {
+          setMetrics(result.data);
+        }
+      } catch {
+        setMetrics(null);
+      }
+    }
+
+    void loadMetrics();
+  }, [demoMode, serverUrl, token]);
+
   function enterDemo() {
     setDemoMode(true);
     setToken("demo-token");
@@ -130,12 +158,36 @@ function App() {
     setSelectedSong({ id: 1, name: "Recorrido de prueba.mp3" });
     setPlayback("Detenido");
     setVolume(65);
+
+    setMetrics({
+      rootfs_used_mb: 174.62,
+      rootfs_total_mb: 486.13,
+      rootfs_available_mb: 311.51,
+      rootfs_limit_mb: 200,
+
+      boot_seconds: 11.37,
+      boot_limit_seconds: 15,
+
+      ram_used_mb: 132.84,
+      ram_total_mb: 3794.25,
+      ram_available_mb: 3661.41,
+
+      cpu_percent: 13.42,
+
+      server_active: true,
+      wifi_active: true,
+      navigation_active: true,
+      navigation_ready_seconds: 11.39,
+      navigation_rss_kb: 2844,
+    });
   }
 
   function leaveSession() {
     setDemoMode(false);
     setToken(undefined);
     setConnected(false);
+    setMetrics(null);
+
   }
 
   async function signIn() {
@@ -251,6 +303,15 @@ function App() {
   }
 
   const isAutonomous = mode === "autonomous";
+
+  const rootfsOk =
+    metrics !== null &&
+    metrics.rootfs_used_mb <= metrics.rootfs_limit_mb;
+
+  const bootOk =
+    metrics !== null &&
+    metrics.boot_seconds <= metrics.boot_limit_seconds;
+
   const sensorRows = [
     { key: "front" as const, label: "Frontal" },
     { key: "side" as const, label: "Lateral" },
@@ -281,6 +342,84 @@ function App() {
           <View><Text style={styles.pageEyebrow}>ROBOT ASPIRADORA</Text><Text style={styles.pageTitle}>Panel de control</Text></View>
           <View style={styles.liveBadge}><View style={styles.liveDot} /><Text style={styles.liveText}>LIVE</Text></View>
         </View>
+
+        <View style={styles.sectionHeadingRow}>
+          <Text style={styles.sectionTitle}>Métricas del sistema</Text>
+          <Text style={styles.sectionMeta}>EFICIENCIA</Text>
+        </View>
+
+        <View style={styles.metricsPanel}>
+          {metrics ? (
+            <>
+              <View style={styles.metricItem}>
+                <View>
+                  <Text style={styles.metricLabel}>ROOTFS UTILIZADO</Text>
+                  <Text style={styles.metricValue}>
+                    {metrics.rootfs_used_mb.toFixed(2)} MB
+                  </Text>
+                  <Text style={styles.metricLimit}>
+                    Límite: {metrics.rootfs_limit_mb} MB
+                  </Text>
+                </View>
+
+                <View
+                  style={[
+                    styles.metricBadge,
+                    rootfsOk ? styles.metricBadgeOk : styles.metricBadgeError,
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.metricBadgeText,
+                      rootfsOk
+                        ? styles.metricBadgeTextOk
+                        : styles.metricBadgeTextError,
+                    ]}
+                  >
+                    {rootfsOk ? "CUMPLE" : "EXCEDE"}
+                  </Text>
+                </View>
+              </View>
+
+              <View style={styles.metricDivider} />
+
+              <View style={styles.metricItem}>
+                <View>
+                  <Text style={styles.metricLabel}>TIEMPO DE ARRANQUE</Text>
+                  <Text style={styles.metricValue}>
+                    {metrics.boot_seconds.toFixed(2)} s
+                  </Text>
+                  <Text style={styles.metricLimit}>
+                    Límite: {metrics.boot_limit_seconds} s
+                  </Text>
+                </View>
+
+                <View
+                  style={[
+                    styles.metricBadge,
+                    bootOk ? styles.metricBadgeOk : styles.metricBadgeError,
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.metricBadgeText,
+                      bootOk
+                        ? styles.metricBadgeTextOk
+                        : styles.metricBadgeTextError,
+                    ]}
+                  >
+                    {bootOk ? "CUMPLE" : "EXCEDE"}
+                  </Text>
+                </View>
+              </View>
+            </>
+          ) : (
+            <Text style={styles.metricsUnavailable}>
+              Métricas todavía no disponibles.
+            </Text>
+          )}
+        </View>
+
 
         <View style={styles.modeSection}>
           <View style={styles.sectionHeadingRow}><Text style={styles.sectionTitle}>Modo de operación</Text><Text style={styles.motorState}>{status.motor === "stopped" ? "MOTORES EN ESPERA" : "MOTORES ACTIVOS"}</Text></View>
@@ -558,6 +697,85 @@ const styles = StyleSheet.create({
 
   cleaningStateActive: {
     color: colors.green,
+  },
+
+  metricsPanel: {
+    backgroundColor: colors.panel,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.line,
+    paddingHorizontal: 14,
+    marginBottom: 21,
+  },
+
+  metricItem: {
+    minHeight: 88,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+
+  metricLabel: {
+    color: colors.muted,
+    fontSize: 8,
+    fontWeight: "800",
+    letterSpacing: 0.8,
+  },
+
+  metricValue: {
+    color: colors.ink,
+    fontSize: 22,
+    fontWeight: "800",
+    marginTop: 5,
+  },
+
+  metricLimit: {
+    color: colors.muted,
+    fontSize: 9,
+    marginTop: 3,
+  },
+
+  metricDivider: {
+    height: 1,
+    backgroundColor: colors.line,
+  },
+
+  metricBadge: {
+    minWidth: 64,
+    minHeight: 27,
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 9,
+  },
+
+  metricBadgeOk: {
+    backgroundColor: colors.greenSoft,
+  },
+
+  metricBadgeError: {
+    backgroundColor: colors.coralSoft,
+  },
+
+  metricBadgeText: {
+    fontSize: 8,
+    fontWeight: "900",
+    letterSpacing: 0.6,
+  },
+
+  metricBadgeTextOk: {
+    color: colors.green,
+  },
+
+  metricBadgeTextError: {
+    color: colors.coral,
+  },
+
+  metricsUnavailable: {
+    color: colors.muted,
+    fontSize: 11,
+    paddingVertical: 20,
+    textAlign: "center",
   },
 });
 

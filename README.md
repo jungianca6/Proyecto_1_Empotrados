@@ -6,7 +6,7 @@
 * **Curso:** CE-1113 Sistemas Empotrados
 * **Profesor:** Dr.-Ing. Jeferson González Gómez
 * **Fecha de entrega:** 15 de octubre de 2026
-* **Equipo:** Giancarlo Vega, Bryan Feng, Allison Redondo, Sebastian Chaves
+* **Equipo:** Giancarlo Vega, Bryan Feng, Alisson Redondo, Sebastian Chaves
 
 
 ## Descripción del Proyecto

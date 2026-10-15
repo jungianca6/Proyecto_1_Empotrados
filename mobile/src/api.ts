@@ -35,6 +35,28 @@ export type Song = {
   name: string;
 };
 
+export type SystemMetrics = {
+  rootfs_used_mb: number;
+  rootfs_total_mb: number;
+  rootfs_available_mb: number;
+  rootfs_limit_mb: number;
+
+  boot_seconds: number;
+  boot_limit_seconds: number;
+
+  ram_used_mb: number;
+  ram_total_mb: number;
+  ram_available_mb: number;
+
+  cpu_percent: number;
+
+  server_active: boolean;
+  wifi_active: boolean;
+  navigation_active: boolean;
+  navigation_ready_seconds: number | null;
+  navigation_rss_kb: number | null;
+};
+
 type ApiResult<T> = {
   status?: string;
   data?: T;
@@ -80,6 +102,7 @@ export function createRobotApi(serverUrl: string, token?: string) {
     login: (username: string, password: string) =>
       request<never>("login", "POST", { username, password }),
     status: () => request<RobotStatus>("status"),
+    metrics: () => request<SystemMetrics>("metrics"),
     getMode: () => request<{ mode: RobotMode }>("mode"),
 
     async sensors() {

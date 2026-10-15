@@ -284,7 +284,6 @@ lrwxrwxrwx 1 alissonrm alissonrm        65 Oct 15 01:52 /home/alissonrm/poky-sca
 -rw-r--r-- 1 alissonrm alissonrm 393424896 Oct 14 10:27 /home/alissonrm/poky-scarthgap-5.0.15/build/tmp/deploy/images/raspberrypi4-64/core-image-minimal-raspberrypi4-64.rootfs-20261014162447.wic
 alissonrm@alissonrm-Vivobook-ASUSLaptop-X1504ZA-X1504ZA:~/poky-scarthgap-5.0.15/build$ 
 ```
-### Pendiente
 
 # Reporte de métricas
 
@@ -501,6 +500,9 @@ Las métricas recopiladas por la aplicación permiten evaluar el tamaño del sis
 | Uso de CPU | 0.15 | % | Informativo |
 
 # Resultados
+<img width="1536" height="864" alt="5690bdcc-18a3-4f62-9778-d98c67425713" src="https://github.com/user-attachments/assets/48800842-6ed9-4708-bf26-d62e50aeca3e" />
+
+<img width="1536" height="864" alt="67864bb9-be75-4188-a800-e2dcb39fc958" src="https://github.com/user-attachments/assets/658e3c04-af5d-4465-8029-339db075bcc4" />
 
 
-### Pendiente 
+

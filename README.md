@@ -14,7 +14,10 @@ Desarrollo de un sistema embebido a medida para un robot aspiradora autónomo ba
 
 
 ## Estructura Organizativa (Roles)
-Pendiente por determinar de forma concreta
+* **Giancarlo Vega:** Entorno de repositorio, receta del servidor, documentación
+* **Bryan Feng:** CGI del uhttpd, API, mapeo primitivo
+* **Alisson Redondo:** Hardware, navegación automática y manual, Wi-Fi de Raspberry Pi 4, métricas
+* **Sebastian Chaves:** Aplicación móvil, documentación de atributos, audio primitivo. 
 
 
 ## Matriz de Requerimientos
@@ -97,37 +100,149 @@ Para replicar la distribución Linux completa, siga los pasos de configuración 
 
 ### 1.1. Configuración de Capas
 
-Asegúrese de incluir la capa personalizada del proyecto en su entorno de construcción:
-
-``` bash
-# Pendiente
+En este paso, se debe ejecutar el siguiente comando en la terminal, para añadir el layer meta-robot al entorno de Yocto:
+```bash
+bitbake-layers add-layer ~/Escritorio/Proyecto_1_Empotrados/src/meta-robot
 ```
 
-### 1.2. Construcción de la Imagen y el SDK
+Ejecutar este comando en la terminal:
+```bash
+bitbake-layers show-layers
+```
+Si aparece esto en el resultado, significa que el layer fue añadido correctamente al entorno de Yocto:
+```bash
+meta-robot            /home/dell/Escritorio/Proyecto_1_Empotrados/src/meta-robot  
+```
+
+### 1.2. Configuración de Servidor
+
+Clonar el repositorio en el entorno de Yocto:
+
+```bash
+git clone -b scarthgap https://git.openembedded.org/meta-openembedded
+```
+
+Añadir las layers necesarias 
+```bash
+$ bitbake-layers add-layer ../meta-openembedded/meta-oe
+$ bitbake-layers add-layer ../meta-openembedded/meta-python
+$ bitbake-layers add-layer ../meta-openembedded/meta-networking
+$ bitbake-layers add-layer ../meta-openwrt
+```
+Revisar que fueron añadidas al entorno de Yocto
+```bash
+$ bitbake-layers show-layers
+```
+
+### CAMBIOS IMPORTANTES:
+
+Dentro de la carpeta de poky-scarthgap de cada uno, buscar este archivo
+
+```bash
+../poky-scarthgap-5.0.1X/meta-openwrt/recipes-core/ustream-ssl/ustream-ssl_git.bb
+```
+
+Busquen el "do_install:append()", y lo cambian completo por esto:
+
+```bash
+do_install:append() {
+	install -d ${D}${includedir}/libubox
+	install -m 0644 ${S}/*.h ${D}${includedir}/libubox
+
+	if [ "${base_libdir}" != "${libdir}" ]; then
+		install -dm 0755 ${D}${base_libdir}
+		mv ${D}${libdir}/libustream-ssl.so ${D}${base_libdir}/libustream-ssl.so
+		rmdir --ignore-fail-on-non-empty ${D}${libdir}
+	fi
+}
+```
+
+### 1.3. Archivos locales
+Asegurarse que conf/local.conf en la máquina local se vea asi:
+
+```bash
+# Configuración del objetivo de hardware
+MACHINE = "raspberrypi4-64"
+
+# Servidor SSH para acceso remoto
+EXTRA_IMAGE_FEATURES += "ssh-server-dropbear"
+
+# Control de hilos para no agotar la memoria RAM
+BB_NUMBER_THREADS = "4"
+PARALLEL_MAKE = "-j 4"
+
+# Limpieza automática de temporales por paquete
+INHERIT += "rm_work"
+
+# Máscara de recetas
+BBMASK += "/home/alissonrm/poky-scarthgap-5.0.15/meta-openwrt/recipes-tweaks/packagegroups/packagegroup-core-boot.bbappend"
+
+# Aplicaciones del proyecto y controladores de Wi-Fi
+IMAGE_INSTALL:append = " \
+    kernel-modules \
+    librobot \
+    navegacion \
+    wpa-supplicant \
+    linux-firmware-bcm43455 \
+    wireless-regdb-static \
+    uhttpd \
+    robot-server \
+    robot-wifi \
+    robot-metrics  \
+"
+
+# Configuración de contraseña para el usuario root
+INHERIT += "extrausers"
+
+EXTRA_USERS_PARAMS = " \
+    usermod -p '$6$POKhlKP0qRF15xV.$fRD/74BemCUY1bfxgP8PpUyP8Fro6D/G0Pww1E/nBNDG8DgiGHbZOW/4YNriKjsZ7RSUaezTzA6zUjDSfO2Xa0' root; \
+"
+
+# Mantener systemd como gestor de inicio
+INIT_MANAGER = "systemd"
+
+ENABLE_AUDIO = "1"
+
+
+ERROR_QA:remove = "usrmerge"
+WARN_QA:append = " usrmerge"
+
+BAD_RECOMMENDATIONS += "os-release"
+
+LICENSE_FLAGS_ACCEPTED += "synaptics-killswitch"
+
+
+PACKAGECONFIG:append:pn-mpg123 = " alsa"
+
+KERNEL_MODULE_AUTOLOAD += "snd_bcm2835"
+KERNEL_MODULE_PROBECONF += "snd_bcm2835"
+module_conf_snd_bcm2835 = "options snd_bcm2835 enable_headphones=1 enable_hdmi=0"
+```
+
+### 1.3. Construcción de la Imagen y el SDK
 
 Para generar la imagen mínima y el SDK de desarrollo (necesario para la compilación cruzada):
 
 ```bash
-# Pendiente
+cd ~/poky-scarthgap-5.0.15
+source oe-init-build-env
+bitbake core-image-minimal
 ```
-
+Crear el toolchain:
+```bash
+bitbake core-image-minimal -c populate_sdk
+```
+Instalar el toolchain:
+```bash
+. tmp/deploy/sdk/poky-glibc-x86_64-meta-toolchain-cortexa72-poky-linux-toolchain-5.0.15.sh
+```
+Esto se hace solo una vez. 
 ## 2. Guía de Compilación Cruzada (Cross-Compilation)
 
 Este procedimiento permite generar los binarios de la aplicación y la biblioteca dinámica utilizando el Toolchain de Yocto.
 
-### 2.1. Preparar el Entorno (Environment Setup)
-
-Es obligatorio exportar las variables de entorno para que el sistema utilice el compilador cruzado en lugar del nativo:
-
+### 2.1. Construcción del Proyecto 
 ```bash
-# Pendiente
-```
-
-### 2.2. Construcción del Proyecto 
-```bash
-cd ~/poky-scarthgap-5.0.15
-source oe-init-build-env
-bitbake core-image-minimal
 ls -lt ~/poky-scarthgap-5.0.15/build/tmp/deploy/images/raspberrypi4-64/*wic* | head
 lsblk
 cd ~/poky-scarthgap-5.0.15/build/tmp/deploy/images/raspberrypi4-64
@@ -154,6 +269,20 @@ sudo partprobe /dev/sda
 ### Pendiente
 
 # Evidencias de compilación cruzada automática
+```bash
+alissonrm@alissonrm-Vivobook-ASUSLaptop-X1504ZA-X1504ZA:~/poky-scarthgap-5.0.15/build$ ls -lt ~/poky-scarthgap-5.0.15/build/tmp/deploy/images/raspberrypi4-64/*wic* | head
+lrwxrwxrwx 1 alissonrm alissonrm        64 Oct 15 01:52 /home/alissonrm/poky-scarthgap-5.0.15/build/tmp/deploy/images/raspberrypi4-64/core-image-minimal-raspberrypi4-64.rootfs.wic.bz2 -> core-image-minimal-raspberrypi4-64.rootfs-20261015075056.wic.bz2
+lrwxrwxrwx 1 alissonrm alissonrm        65 Oct 15 01:52 /home/alissonrm/poky-scarthgap-5.0.15/build/tmp/deploy/images/raspberrypi4-64/core-image-minimal-raspberrypi4-64.rootfs.wic.bmap -> core-image-minimal-raspberrypi4-64.rootfs-20261015075056.wic.bmap
+-rw-r--r-- 1 alissonrm alissonrm      3812 Oct 15 01:52 /home/alissonrm/poky-scarthgap-5.0.15/build/tmp/deploy/images/raspberrypi4-64/core-image-minimal-raspberrypi4-64.rootfs-20261015075056.wic.bmap
+-rw-r--r-- 1 alissonrm alissonrm  72052510 Oct 15 01:52 /home/alissonrm/poky-scarthgap-5.0.15/build/tmp/deploy/images/raspberrypi4-64/core-image-minimal-raspberrypi4-64.rootfs-20261015075056.wic.bz2
+-rw-r--r-- 1 alissonrm alissonrm 382520320 Oct 15 00:54 /home/alissonrm/poky-scarthgap-5.0.15/build/tmp/deploy/images/raspberrypi4-64/core-image-minimal-raspberrypi4-64.rootfs-20261015065312.wic
+-rw-r--r-- 1 alissonrm alissonrm 393424896 Oct 14 14:42 /home/alissonrm/poky-scarthgap-5.0.15/build/tmp/deploy/images/raspberrypi4-64/core-image-minimal-raspberrypi4-64.rootfs-20261014204032.wic
+-rw-r--r-- 1 alissonrm alissonrm 393424896 Oct 14 13:44 /home/alissonrm/poky-scarthgap-5.0.15/build/tmp/deploy/images/raspberrypi4-64/core-image-minimal-raspberrypi4-64.rootfs-20261014194224.wic
+-rw-r--r-- 1 alissonrm alissonrm 393424896 Oct 14 11:58 /home/alissonrm/poky-scarthgap-5.0.15/build/tmp/deploy/images/raspberrypi4-64/core-image-minimal-raspberrypi4-64.rootfs-20261014175707.wic
+-rw-r--r-- 1 alissonrm alissonrm 393424896 Oct 14 10:51 /home/alissonrm/poky-scarthgap-5.0.15/build/tmp/deploy/images/raspberrypi4-64/core-image-minimal-raspberrypi4-64.rootfs-20261014164832.wic
+-rw-r--r-- 1 alissonrm alissonrm 393424896 Oct 14 10:27 /home/alissonrm/poky-scarthgap-5.0.15/build/tmp/deploy/images/raspberrypi4-64/core-image-minimal-raspberrypi4-64.rootfs-20261014162447.wic
+alissonrm@alissonrm-Vivobook-ASUSLaptop-X1504ZA-X1504ZA:~/poky-scarthgap-5.0.15/build$ 
+```
 ### Pendiente
 
 # Reporte de métricas
@@ -372,16 +501,5 @@ Las métricas recopiladas por la aplicación permiten evaluar el tamaño del sis
 
 # Resultados
 
-alissonrm@alissonrm-Vivobook-ASUSLaptop-X1504ZA-X1504ZA:~/poky-scarthgap-5.0.15/build$ ls -lt ~/poky-scarthgap-5.0.15/build/tmp/deploy/images/raspberrypi4-64/*wic* | head
-lrwxrwxrwx 1 alissonrm alissonrm        64 Oct 15 01:52 /home/alissonrm/poky-scarthgap-5.0.15/build/tmp/deploy/images/raspberrypi4-64/core-image-minimal-raspberrypi4-64.rootfs.wic.bz2 -> core-image-minimal-raspberrypi4-64.rootfs-20261015075056.wic.bz2
-lrwxrwxrwx 1 alissonrm alissonrm        65 Oct 15 01:52 /home/alissonrm/poky-scarthgap-5.0.15/build/tmp/deploy/images/raspberrypi4-64/core-image-minimal-raspberrypi4-64.rootfs.wic.bmap -> core-image-minimal-raspberrypi4-64.rootfs-20261015075056.wic.bmap
--rw-r--r-- 1 alissonrm alissonrm      3812 Oct 15 01:52 /home/alissonrm/poky-scarthgap-5.0.15/build/tmp/deploy/images/raspberrypi4-64/core-image-minimal-raspberrypi4-64.rootfs-20261015075056.wic.bmap
--rw-r--r-- 1 alissonrm alissonrm  72052510 Oct 15 01:52 /home/alissonrm/poky-scarthgap-5.0.15/build/tmp/deploy/images/raspberrypi4-64/core-image-minimal-raspberrypi4-64.rootfs-20261015075056.wic.bz2
--rw-r--r-- 1 alissonrm alissonrm 382520320 Oct 15 00:54 /home/alissonrm/poky-scarthgap-5.0.15/build/tmp/deploy/images/raspberrypi4-64/core-image-minimal-raspberrypi4-64.rootfs-20261015065312.wic
--rw-r--r-- 1 alissonrm alissonrm 393424896 Oct 14 14:42 /home/alissonrm/poky-scarthgap-5.0.15/build/tmp/deploy/images/raspberrypi4-64/core-image-minimal-raspberrypi4-64.rootfs-20261014204032.wic
--rw-r--r-- 1 alissonrm alissonrm 393424896 Oct 14 13:44 /home/alissonrm/poky-scarthgap-5.0.15/build/tmp/deploy/images/raspberrypi4-64/core-image-minimal-raspberrypi4-64.rootfs-20261014194224.wic
--rw-r--r-- 1 alissonrm alissonrm 393424896 Oct 14 11:58 /home/alissonrm/poky-scarthgap-5.0.15/build/tmp/deploy/images/raspberrypi4-64/core-image-minimal-raspberrypi4-64.rootfs-20261014175707.wic
--rw-r--r-- 1 alissonrm alissonrm 393424896 Oct 14 10:51 /home/alissonrm/poky-scarthgap-5.0.15/build/tmp/deploy/images/raspberrypi4-64/core-image-minimal-raspberrypi4-64.rootfs-20261014164832.wic
--rw-r--r-- 1 alissonrm alissonrm 393424896 Oct 14 10:27 /home/alissonrm/poky-scarthgap-5.0.15/build/tmp/deploy/images/raspberrypi4-64/core-image-minimal-raspberrypi4-64.rootfs-20261014162447.wic
-alissonrm@alissonrm-Vivobook-ASUSLaptop-X1504ZA-X1504ZA:~/poky-scarthgap-5.0.15/build$ 
+
 ### Pendiente 

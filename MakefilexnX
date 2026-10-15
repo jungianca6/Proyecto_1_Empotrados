@@ -1,0 +1,16 @@
+CC ?= gcc
+CFLAGS ?= -Wall -Iinclude -fPIC
+LDFLAGS ?= -Llib -lrobot
+
+all: lib/librobot.so bin/app_robot
+
+lib/librobot.so: src/motors.c
+	@mkdir -p lib
+	$(CC) $(CFLAGS) -shared -o $@ $^
+
+bin/app_robot: src/main.c lib/librobot.so
+	@mkdir -p bin
+	$(CC) $(CFLAGS) $< -o $@ $(LDFLAGS)
+
+clean:
+	rm -rf lib bin

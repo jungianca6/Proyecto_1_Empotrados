@@ -1,0 +1,23 @@
+#!/bin/sh
+
+case "$1" in
+    start)
+        echo "Iniciando robot autonomo..."
+        /usr/bin/app_robot &
+        ;;
+    stop)
+        echo "Deteniendo robot autonomo..."
+        killall app_robot 2>/dev/null
+        ;;
+    restart)
+        $0 stop
+        sleep 1
+        $0 start
+        ;;
+    *)
+        echo "Uso: $0 {start|stop|restart}"
+        exit 1
+        ;;
+esac
+
+exit 0

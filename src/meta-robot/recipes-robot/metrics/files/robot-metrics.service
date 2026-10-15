@@ -1,0 +1,12 @@
+[Unit]
+Description=Recoleccion automatica de metricas del robot
+After=robot-server.service robot-wifi.service
+Wants=robot-server.service robot-wifi.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/sbin/robot-metrics-collect
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,41 @@
+name : "Feature / Tarea"
+description: Nueva funcionalidad o tarea del proyecto
+title: "[FEATURE]: "
+labels: []
+body:
+  - type: textarea
+    id: contexto
+    attributes:
+      label: Contexto
+      description: ¿Qué se debe implementar y por qué?
+      placeholder: Describe la funcionalidad o tarea...
+    validations:
+      required: true
+
+  - type: textarea
+    id: criterios
+    attributes:
+      label: Criterios de aceptación
+      description: Lista de checkboxes que definen cuándo el issue está terminado
+      placeholder: |
+        - [ ] Criterio 1
+        - [ ] Criterio 2
+    validations:
+      required: true
+
+  - type: dropdown
+    id: subsistema
+    attributes:
+      label: Subsistema
+      options:
+        - navegacion
+        - audio
+        - control-remoto
+        - mapa
+        - biblioteca
+        - Yocto
+        - hardware
+        - documentation
+        - metricas
+    validations:
+      required: true

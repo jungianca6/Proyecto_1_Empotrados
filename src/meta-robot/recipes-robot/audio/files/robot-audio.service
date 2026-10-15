@@ -1,0 +1,13 @@
+[Unit]
+Description=Servicio de audio del robot aspiradora
+After=local-fs.target sound.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/audio-daemon
+Restart=on-failure
+RestartSec=2
+RuntimeDirectory=robot-audio
+
+[Install]
+WantedBy=multi-user.target

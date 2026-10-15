@@ -1,0 +1,37 @@
+name: "Bug"
+description: Reportar un error o comportamiento inesperado
+title: "[BUG]: "
+labels: ["bug"]
+body:
+  - type: textarea
+    id: descripcion
+    attributes:
+      label: Descripción del bug
+      description: ¿Qué está pasando?
+    validations:
+      required: true
+
+  - type: textarea
+    id: pasos
+    attributes:
+      label: Pasos para reproducir
+      placeholder: |
+        1. ...
+        2. ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: esperado
+    attributes:
+      label: Comportamiento esperado
+    validations:
+      required: true
+
+  - type: textarea
+    id: entorno
+    attributes:
+      label: Entorno
+      placeholder: "Raspberry Pi 4 / imagen Yocto commit XXXX / etc."
+    validations:
+      required: false

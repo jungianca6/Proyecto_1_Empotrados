@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Documentación del curso
+    url: https://docs.github.com/en/get-started/quickstart/github-flow
+    about: Referencia de flujo de trabajo con Git recomendada por el profesor

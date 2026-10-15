@@ -267,7 +267,197 @@ sudo partprobe /dev/sda
 <img width="1536" height="794" alt="arquitectura" src="https://github.com/user-attachments/assets/efb8c158-c8db-4527-804e-3d616ee69fac" />
 
 # Documentación de la API
-### Pendiente
+## Descripción general
+
+El proyecto implementa una biblioteca dinámica denominada `librobot.so`, desarrollada en C, que proporciona una API pública para controlar y consultar los componentes del robot aspiradora.
+
+Su objetivo es encapsular el acceso al hardware y ofrecer una interfaz común para los distintos módulos del sistema, evitando que cada componente tenga que interactuar directamente con los controladores de bajo nivel.
+
+La interfaz pública se define en `librobot.h` y su implementación se encuentra en `librobot.c`. Estos archivos actúan como una capa de abstracción sobre los módulos internos de motores, sensores, LEDs, cepillos, motor de aspiración y navegación.
+
+La biblioteca es utilizada por la aplicación de navegación autónoma y por los programas CGI del servidor web `uhttpd`, permitiendo que las operaciones solicitadas desde la interfaz web se comuniquen con los componentes del robot a través de una API común.
+
+## Arquitectura de la biblioteca
+
+La arquitectura de comunicación se organiza de la siguiente manera:
+
+1. **Interfaz web:** permite al usuario interactuar con el robot desde un navegador.
+2. **Servidor web `uhttpd`:** recibe las solicitudes HTTP y ejecuta los programas CGI correspondientes.
+3. **Programas CGI:** procesan las solicitudes y utilizan las funciones públicas de `librobot.so` para ejecutar las operaciones solicitadas.
+4. **Biblioteca dinámica `librobot.so`:** expone una interfaz común y delega las operaciones a los módulos correspondientes.
+5. **Módulos internos:** implementan el acceso al hardware y las funcionalidades de motores, sensores, LEDs, cepillos, aspiración y navegación autónoma.
+
+La aplicación de navegación también utiliza la biblioteca para acceder a los componentes del robot. De esta forma, tanto la navegación autónoma como el servidor web pueden utilizar una interfaz compartida.
+
+Los archivos principales relacionados con esta arquitectura son:
+
+| Archivo o componente | Responsabilidad |
+|---|---|
+| `librobot.h` | Declaración de la API pública y los tipos expuestos por la biblioteca. |
+| `librobot.c` | Implementación de las funciones públicas y delegación hacia los módulos internos. |
+| `motors.c` y `motors.h` | Control de los movimientos del robot. |
+| `sensors.c` y `sensors.h` | Lectura de los sensores de obstáculos. |
+| `leds.c` y `leds.h` | Control y consulta de los LEDs indicadores. |
+| `brushes.c` y `brushes.h` | Activación y desactivación de los cepillos. |
+| `vacuum.c` y `vacuum.h` | Activación y desactivación del motor de aspiración. |
+| Módulos de navegación y `fsm.h` | Implementación y consulta del estado de la máquina de estados finitos (FSM). |
+| Programas CGI | Comunicación entre las solicitudes HTTP y las funciones de la biblioteca. |
+
+## Convenciones de la API
+
+Las funciones públicas utilizan valores enteros como resultado de sus operaciones.
+
+En general, las funciones de inicialización devuelven el resultado del módulo interno correspondiente. Las funciones de control que actualmente no propagan errores de los módulos de hardware devuelven `0` después de invocar la operación.
+
+Por convención, las funciones que consultan sensores devuelven valores que representan el estado detectado o un error. Las funciones de consulta de LEDs y de navegación devuelven el valor correspondiente al estado solicitado.
+
+**Importante:** un retorno de `0` indica que la función pública completó su ejecución según su implementación actual, pero no necesariamente garantiza que el hardware haya realizado correctamente la operación. Algunas funciones todavía no verifican ni propagan los errores del módulo subyacente.
+
+## API de motores
+
+La API de motores permite inicializar y liberar los recursos asociados al control del movimiento, ejecutar desplazamientos y detener el robot.
+
+La implementación actual controla el movimiento del robot completo, en lugar de ofrecer control independiente sobre cada motor.
+
+| Función | Parámetros | Retorno | Descripción |
+|---|---|---|---|
+| `robot_motor_init()` | Ninguno | Resultado de `motors_init()` | Inicializa el subsistema de motores. |
+| `robot_motor_deinit()` | Ninguno | `0` | Libera los recursos del subsistema de motores. |
+| `robot_motor_move(direction, speed_pct)` | Dirección y velocidad solicitada | `0` en la implementación actual | Ejecuta un movimiento del robot. |
+| `robot_motor_stop_all()` | Ninguno | `0` en la implementación actual | Solicita detener el movimiento del robot. |
+
+El parámetro `direction` utiliza el tipo `RobotDirection`, definido por el módulo de motores. La dirección `ROBOT_STOP` representa la orden de detener el movimiento.
+
+El parámetro `speed_pct` representa la velocidad solicitada en porcentaje:
+
+- `0`: robot detenido.
+- `1–100`: velocidad solicitada.
+
+La implementación de `robot_motor_move()` limita el valor recibido al intervalo de 0 a 100. Sin embargo, el control PWM todavía no está implementado: el parámetro se recibe y valida, pero el código actual activa los motores a plena potencia cuando corresponde. Por lo tanto, los valores intermedios no garantizan velocidades físicas proporcionales.
+
+## API de sensores
+
+La API de sensores permite inicializar el subsistema y consultar la presencia de obstáculos.
+
+Los sensores FC-51 utilizados en la implementación actual proporcionan señales digitales. Por ello, permiten determinar si se detecta un obstáculo, pero no medir su distancia en centímetros.
+
+| Función | Parámetros | Retorno | Descripción |
+|---|---|---|---|
+| `robot_sensor_init()` | Ninguno | Resultado de `sensors_init()` | Inicializa los sensores. |
+| `robot_sensor_deinit()` | Ninguno | `0` | Finaliza la operación de la API de sensores. Actualmente no libera recursos adicionales. |
+| `robot_sensor_front_obstacle()` | Ninguno | `1`, `0` o `-1` | Consulta la detección de obstáculos frontales. |
+| `robot_sensor_side_obstacle()` | Ninguno | Según la implementación del sensor | Consulta la detección de obstáculos laterales. |
+
+Los valores documentados para la consulta frontal son:
+
+- `1`: obstáculo detectado.
+- `0`: camino despejado.
+- `-1`: error.
+
+La función `robot_sensor_side_obstacle()` delega la consulta en `sensor_side_obstacle_detected()`. Su interpretación exacta depende de los valores y las condiciones de error definidos en la implementación de ese módulo.
+
+## API de LEDs
+
+La API de LEDs permite inicializar el subsistema, liberar sus recursos, modificar el estado de un indicador y consultar su estado actual.
+
+Los cuatro indicadores se identifican mediante el tipo enumerado `robot_led_t`.
+
+| Identificador | Valor | Propósito |
+|---|---:|---|
+| `LED_AUTO` | `0` | Indicador del modo autónomo. |
+| `LED_MANUAL` | `1` | Indicador del modo manual. |
+| `LED_OBSTACLE` | `2` | Indicador de detección de obstáculos. |
+| `LED_POWER` | `3` | Indicador del sistema o alimentación. |
+
+Las funciones disponibles son:
+
+| Función | Parámetros | Retorno | Descripción |
+|---|---|---|---|
+| `robot_led_init()` | Ninguno | Resultado de `leds_init()` | Inicializa el subsistema de LEDs. |
+| `robot_led_deinit()` | Ninguno | `0` | Libera los recursos del subsistema. |
+| `robot_led_set(led, state)` | Identificador y estado solicitado | `0` si el identificador es válido; `-1` si no lo es | Solicita cambiar el estado de un LED. |
+| `robot_led_get(led)` | Identificador del LED | Estado devuelto por el módulo o `-1` si el identificador es inválido | Consulta el estado de un LED. |
+
+El parámetro `state` se transmite a la función específica de cada indicador. Su interpretación, por ejemplo, como encendido o apagado, depende de la implementación del módulo de LEDs.
+
+Actualmente, la API está definida e integrada en `librobot.c`. Su disponibilidad funcional depende de la implementación y validación del módulo de hardware correspondiente.
+
+## API de cepillos
+
+La API de cepillos permite controlar el mecanismo de limpieza sin intervenir directamente en el subsistema de movimiento.
+
+| Función | Parámetros | Retorno | Descripción |
+|---|---|---|---|
+| `robot_brushes_on()` | Ninguno | `0` en la implementación actual | Solicita activar los cepillos. |
+| `robot_brushes_off()` | Ninguno | `0` en la implementación actual | Solicita desactivar los cepillos. |
+
+Ambas funciones delegan la operación en `brushes_on()` y `brushes_off()`, respectivamente.
+
+Esta separación permite controlar los cepillos independientemente del movimiento del robot. Por ejemplo, el robot puede continuar desplazándose mientras los cepillos están apagados, siempre que el resto de la lógica de control lo permita.
+
+## API del motor de aspiración
+
+La API del motor de aspiración permite activar y desactivar el mecanismo encargado de aspirar la suciedad.
+
+| Función | Parámetros | Retorno | Descripción |
+|---|---|---|---|
+| `robot_vacuum_on()` | Ninguno | `0` en la implementación actual | Solicita activar el motor de aspiración. |
+| `robot_vacuum_off()` | Ninguno | `0` en la implementación actual | Solicita desactivar el motor de aspiración. |
+
+Estas funciones delegan las operaciones en `vacuum_on()` y `vacuum_off()`.
+
+Al igual que ocurre con los cepillos, el control del motor de aspiración está separado de la API de movimiento. Esto permite gestionar los mecanismos de limpieza sin tener que detener necesariamente la navegación.
+
+Los valores de retorno actuales no confirman por sí solos que el motor físico haya respondido correctamente.
+
+## API de audio
+
+La API de audio define una interfaz pública para inicializar el subsistema, reproducir archivos, pausar y detener la reproducción, modificar el volumen y liberar los recursos utilizados.
+
+| Función | Parámetros | Retorno actual | Descripción |
+|---|---|---|---|
+| `robot_audio_init()` | Ninguno | `-1` | Inicialización del subsistema de audio. |
+| `robot_audio_deinit()` | Ninguno | `0` | Finalización de la API de audio. |
+| `robot_audio_play(filepath)` | Ruta del archivo de audio | `-1` | Solicitud de reproducción de un archivo. |
+| `robot_audio_pause()` | Ninguno | `-1` | Solicitud de pausa de la reproducción. |
+| `robot_audio_stop()` | Ninguno | `-1` | Solicitud de detener la reproducción. |
+| `robot_audio_set_volume(volume)` | Volumen solicitado | `-1` | Solicitud de modificación del volumen. |
+
+Aunque estas funciones forman parte de la interfaz pública, la implementación actual en `librobot.c` todavía no incorpora la funcionalidad de audio: las operaciones principales devuelven `-1`.
+
+Por tanto, esta sección documenta la interfaz prevista, no una funcionalidad que pueda considerarse operativa. La reproducción real requiere integrar el módulo de audio y sustituir estas implementaciones provisionales.
+
+## API de navegación
+
+La navegación autónoma utiliza una máquina de estados finitos (FSM) para representar el estado del sistema de navegación.
+
+La biblioteca expone una función para consultar dicho estado:
+
+| Función | Parámetros | Retorno | Descripción |
+|---|---|---|---|
+| `robot_navigation_state()` | Ninguno | Estado devuelto por `fsm_get_state()`, convertido a entero | Consulta el estado actual de la máquina de estados de navegación. |
+
+La función delega la consulta en `fsm_get_state()`. La interpretación del valor devuelto depende de los estados definidos en la implementación de la FSM.
+
+Esta interfaz permite que otros componentes, como los programas CGI del servidor web, puedan consultar el estado de navegación sin acceder directamente a las estructuras internas de la máquina de estados.
+
+## Integración con el servidor web
+
+El servidor web `uhttpd` permite acceder a las funcionalidades del robot desde una interfaz web. Para ello, los programas CGI actúan como intermediarios entre las solicitudes HTTP y la biblioteca dinámica.
+
+El flujo general de una operación es el siguiente:
+
+1. El usuario ejecuta una acción desde la interfaz web.
+2. El navegador envía una solicitud HTTP al servidor `uhttpd`.
+3. El servidor ejecuta el programa CGI correspondiente.
+4. El programa CGI procesa los parámetros de la solicitud y utiliza las funciones públicas de `librobot.so`.
+5. La biblioteca delega la operación al módulo interno correspondiente.
+6. El programa CGI devuelve una respuesta HTTP al navegador.
+
+Este diseño separa la interfaz de usuario, la lógica de comunicación y el acceso al hardware.
+
+Por ejemplo, una solicitud de activación de los cepillos puede procesarse mediante un programa CGI que invoque `robot_brushes_on()`. De forma similar, una solicitud de consulta de sensores puede utilizar `robot_sensor_front_obstacle()` para obtener la información necesaria para construir la respuesta al cliente.
+
 
 # Evidencias de compilación cruzada automática
 ```bash

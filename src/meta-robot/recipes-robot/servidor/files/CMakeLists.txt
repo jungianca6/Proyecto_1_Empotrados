@@ -26,6 +26,7 @@ set(CGI_PROGRAMS
     map
     brushes
     vacuum
+    metrics
 )
 
 find_package(PkgConfig REQUIRED)

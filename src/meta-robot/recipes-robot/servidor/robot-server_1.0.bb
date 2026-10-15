@@ -32,6 +32,7 @@ SRC_URI = " \
     file://lib/stub/librobot_stub.c \
     file://lib/db/database.c \
     file://lib/db/database.h \
+    file://cgi/metrics.c \
 "
 
 S = "${WORKDIR}"
